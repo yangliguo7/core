@@ -540,7 +540,6 @@ export function createComponentInstance(
     sp: null
   }
   console.log('创建instance实例', instance)
-
   if (__DEV__) {
     instance.ctx = createDevRenderContext(instance)
   } else {
