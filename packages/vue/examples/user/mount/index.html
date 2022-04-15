@@ -1,0 +1,57 @@
+<html>
+  <body>
+    <div id="aaaa"></div>
+  </body>
+</html>
+
+<script src="../../../dist/vue.global.js"></script>
+
+<script>
+  const app = Vue.createApp(
+    {
+      data() {
+        return {
+          test: 2,
+          name: 'aaa'
+        }
+      },
+      template: `
+       <div>
+       <aaa></aaa>
+       <ccc></ccc>
+       </div>
+    `,
+      props: {
+        a: {
+          type: String
+        }
+      }
+    },
+    {
+      class: ['1', { a: 2 }, '3'], // array | object | str
+      style: ['12312:12313'], // Record<string,string|array|array[][]>,
+      ref: '1'
+    }
+  )
+  app.component('aaa', {
+    template: `<div>aaa</div>`
+  })
+  app.component('ccc', {
+    template: `<div>ccc</div><div>ccc</div>`
+  })
+  app.mixin({
+    props: {
+      b: {
+        type: String
+      }
+    }
+  })
+  app.mixin({
+    props: {
+      c: {
+        type: String
+      }
+    }
+  })
+  app.mount('#aaaa')
+</script>

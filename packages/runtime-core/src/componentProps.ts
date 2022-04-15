@@ -158,6 +158,8 @@ export function initProps(
 ) {
   const props: Data = {}
   const attrs: Data = {}
+  // 属性上定义__vInternal 数值为1
+  // def => Object.defineProperty
   def(attrs, InternalObjectKey, 1)
 
   instance.propsDefaults = Object.create(null)
@@ -335,6 +337,7 @@ function setFullProps(
   props: Data,
   attrs: Data
 ) {
+  // fixme propsOptions 什么时候定义的
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
   let rawCastValues: Data | undefined
@@ -459,6 +462,7 @@ export function normalizePropsOptions(
   appContext: AppContext,
   asMixin = false
 ): NormalizedPropsOptions {
+  debugger
   const cache = appContext.propsCache
   const cached = cache.get(comp)
   if (cached) {

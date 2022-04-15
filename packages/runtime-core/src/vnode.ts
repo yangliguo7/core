@@ -380,12 +380,14 @@ const createVNodeWithArgsTransform = (
 
 export const InternalObjectKey = `__vInternal`
 
-const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
-  key != null ? key : null
+// 返回props的key
+const normalizeKey = ({ key }: VNodeProps): VNode['key'] => {
+  return key != null ? key : null
+}
 
 const normalizeRef = ({
   ref,
-  ref_key,
+  ref_key, // fixme 这个标识时什么
   ref_for
 }: VNodeProps): VNodeNormalizedRefAtom | null => {
   return (
@@ -408,12 +410,12 @@ function createBaseVNode(
   needFullChildrenNormalization = false
 ) {
   const vnode = {
-    __v_isVNode: true,
+    __v_isVNode: true, // 标识是否是一个vnode
     __v_skip: true,
     type,
     props,
-    key: props && normalizeKey(props),
-    ref: props && normalizeRef(props),
+    key: props && normalizeKey(props), // props的key | null
+    ref: props && normalizeRef(props), // { i: currentRenderingInstance, r: ref, k: ref_key, f: !!ref_for } | null
     scopeId: currentScopeId,
     slotScopeIds: null,
     children,
@@ -435,6 +437,9 @@ function createBaseVNode(
     appContext: null
   } as VNode
 
+  console.log('创建vnode实例', vnode)
+  // 默认为false
+  // 在_creatNode中传入的是true
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
     // normalize suspense children
@@ -451,6 +456,7 @@ function createBaseVNode(
 
   // validate key
   if (__DEV__ && vnode.key !== vnode.key) {
+    // NaN !== NaN
     warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
   }
 
@@ -483,6 +489,8 @@ function createBaseVNode(
 
 export { createBaseVNode as createElementVNode }
 
+// createVNode => _createVNode
+// 这里的createVNodeWithArgsTransform实际调用的也是_createVNode
 export const createVNode = (
   __DEV__ ? createVNodeWithArgsTransform : _createVNode
 ) as typeof _createVNode
@@ -502,6 +510,8 @@ function _createVNode(
     type = Comment
   }
 
+  // isVnode 通过判断type上是否有 __v_isVNode 属性
+  // 如果传入的是一个node则返回一个一摸一样的新node
   if (isVNode(type)) {
     // createVNode receiving an existing vnode. This happens in cases like
     // <component :is="vnode"/>
@@ -526,27 +536,33 @@ function _createVNode(
   // class & style normalization.
   if (props) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
-    props = guardReactiveProps(props)!
+    // 获取一个不具有响应式的新的props
+    props = guardReactiveProps(props)! // 这里的!为ts的特殊语法 标识一定存在。
+    // class为特殊属性名称 所以这里需要重写名称
     let { class: klass, style } = props
     if (klass && !isString(klass)) {
+      // 转换class。klass可以为 array | object | str
       props.class = normalizeClass(klass)
     }
+    // 这里限定了style 必须是一个isObject；然而normalizeStyle 并不是只能处理object
     if (isObject(style)) {
-      // reactive state objects need to be cloned since they are likely to be
-      // mutated
+      // reactive state objects need to be cloned since they are likely to be mutated
       if (isProxy(style) && !isArray(style)) {
         style = extend({}, style)
       }
+      // 这里就是props.style = style
       props.style = normalizeStyle(style)
     }
   }
 
   // encode the vnode type information into a bitmap
-  const shapeFlag = isString(type)
-    ? ShapeFlags.ELEMENT
-    : __FEATURE_SUSPENSE__ && isSuspense(type)
+  // shapeFlag 的作用是为了后面patch做准备
+  // 如果你是从createApp中进入的 那这个type只有两种情况 object/function
+  const shapeFlag = isString(type) // fixme 什么时候是字符节点
+    ? ShapeFlags.ELEMENT //
+    : __FEATURE_SUSPENSE__ && isSuspense(type) // suspense v3 新增
     ? ShapeFlags.SUSPENSE
-    : isTeleport(type)
+    : isTeleport(type) // teleport v3 新增
     ? ShapeFlags.TELEPORT
     : isObject(type)
     ? ShapeFlags.STATEFUL_COMPONENT
@@ -554,6 +570,7 @@ function _createVNode(
     ? ShapeFlags.FUNCTIONAL_COMPONENT
     : 0
 
+  // 要求type 最好不是响应式对象
   if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
     type = toRaw(type)
     warn(
@@ -565,19 +582,20 @@ function _createVNode(
       type
     )
   }
-
   return createBaseVNode(
     type,
     props,
-    children,
-    patchFlag,
-    dynamicProps,
+    children /*默认 null*/,
+    patchFlag /*默认 0*/,
+    dynamicProps /*默认 null*/,
     shapeFlag,
-    isBlockNode,
+    isBlockNode /*默认 false*/,
     true
   )
 }
 
+// 如果数据是响应式数据则返回数据原型上的值 如果是内部Key则会拷贝一个新增
+// 返回一个不具有响应式的新的props
 export function guardReactiveProps(props: (Data & VNodeProps) | null) {
   if (!props) return null
   return isProxy(props) || InternalObjectKey in props

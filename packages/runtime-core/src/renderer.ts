@@ -290,8 +290,8 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
  * ```
  */
 export function createRenderer<
-  HostNode = RendererNode,
-  HostElement = RendererElement
+  HostNode = RendererNode, // HostNode => node
+  HostElement = RendererElement // HostElement => element
 >(options: RendererOptions<HostNode, HostElement>) {
   return baseCreateRenderer<HostNode, HostElement>(options)
 }
@@ -305,31 +305,42 @@ export function createHydrationRenderer(
   return baseCreateRenderer(options, createHydrationFunctions)
 }
 
+// hydration：一句话解释：将干瘪的字符串注水。
+// @link https://www.zhihu.com/question/66068748
 // overload 1: no hydration
+// 非SSR render
 function baseCreateRenderer<
   HostNode = RendererNode,
   HostElement = RendererElement
 >(options: RendererOptions<HostNode, HostElement>): Renderer<HostElement>
 
 // overload 2: with hydration
+// SSR相关 render
 function baseCreateRenderer(
   options: RendererOptions<Node, Element>,
   createHydrationFns: typeof createHydrationFunctions
 ): HydrationRenderer
 
 // implementation
+// 利用函数柯里化的技巧、无论是hydration还是非hydration都是走的这个函数
 function baseCreateRenderer(
-  options: RendererOptions,
-  createHydrationFns?: typeof createHydrationFunctions
+  options: RendererOptions, // 生成真实dom相关的api
+  createHydrationFns?: typeof createHydrationFunctions // 标识是否是SSR渲染
 ): any {
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {
     initFeatureFlags()
   }
 
+  // getGlobalThis => 根据环境获得不同的全局this
   const target = getGlobalThis()
   target.__VUE__ = true
+  console.log(`baseCreateRenderer`, `__VUE__`, true)
+  // 这里的__DEV__或者__FEATURE_PROD_DEVTOOLS__ 在rollup中build定义的
+  // 如果你跑的是 npm run dev => scripts/dev.js
+  // __DEV__ 默认是true ; __FEATURE_PROD_DEVTOOLS__  默认是 false
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    // 开启Devtools
     setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__, target)
   }
 
@@ -352,9 +363,9 @@ function baseCreateRenderer(
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
   const patch: PatchFn = (
-    n1,
-    n2,
-    container,
+    n1, // 新node
+    n2, // 旧 node
+    container,// 根容器
     anchor = null,
     parentComponent = null,
     parentSuspense = null,
@@ -362,6 +373,7 @@ function baseCreateRenderer(
     slotScopeIds = null,
     optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren
   ) => {
+    debugger
     if (n1 === n2) {
       return
     }
@@ -373,6 +385,9 @@ function baseCreateRenderer(
       n1 = null
     }
 
+    // PatchFlags => 是diff算法中标识符号
+    // PatchFlags.BAIL 一个特殊标志，指示差异算法应该退出优化模式。
+    // 例如，在遇到非编译器生成的插槽时由 renderSlot() 创建的块片段（即手动编写的渲染函数，应该始终完全区分）或手动克隆VNodes
     if (n2.patchFlag === PatchFlags.BAIL) {
       optimized = false
       n2.dynamicChildren = null
@@ -386,6 +401,7 @@ function baseCreateRenderer(
       case Comment:
         processCommentNode(n1, n2, container, anchor)
         break
+      // 静态节点 在创建 VNode 的时候如果没有根组件的时候 元素类型就会被标记为静态节点
       case Static:
         if (n1 == null) {
           mountStaticNode(n2, container, anchor, isSVG)
@@ -407,6 +423,7 @@ function baseCreateRenderer(
         )
         break
       default:
+        // fixme 这里 & 作用是什么
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(
             n1,
@@ -616,6 +633,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
+    debugger
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
     const { type, props, shapeFlag, transition, patchFlag, dirs } = vnode
@@ -1147,8 +1165,8 @@ function baseCreateRenderer(
   }
 
   const processComponent = (
-    n1: VNode | null,
-    n2: VNode,
+    n1: VNode | null, // 新 vnode
+    n2: VNode, // 旧 vnode
     container: RendererElement,
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
@@ -1196,6 +1214,8 @@ function baseCreateRenderer(
     // mounting
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
+    // 创建instance
+    // vnode.component == instance == createComponentInstance(fn)
     const instance: ComponentInternalInstance =
       compatMountInstance ||
       (initialVNode.component = createComponentInstance(
@@ -1223,6 +1243,7 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
+      // 将模板转化为render函数 根据render 函数进行 下一步操作
       setupComponent(instance)
       if (__DEV__) {
         endMeasure(instance, `init`)
@@ -2302,6 +2323,7 @@ function baseCreateRenderer(
 
   const render: RootRenderFunction = (vnode, container, isSVG) => {
     if (vnode == null) {
+      // 什么情况下container上会有_vnode
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
       }
@@ -2327,6 +2349,7 @@ function baseCreateRenderer(
 
   let hydrate: ReturnType<typeof createHydrationFunctions>[0] | undefined
   let hydrateNode: ReturnType<typeof createHydrationFunctions>[1] | undefined
+  // SSR 处理逻辑
   if (createHydrationFns) {
     ;[hydrate, hydrateNode] = createHydrationFns(
       internals as RendererInternals<Node, Element>

@@ -1,3 +1,6 @@
+//  << 向左移位
+// x << y 位 ==>  x * 2 ** y
+
 export const enum ShapeFlags {
   ELEMENT = 1,
   FUNCTIONAL_COMPONENT = 1 << 1,

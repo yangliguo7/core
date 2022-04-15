@@ -452,12 +452,15 @@ export function createComponentInstance(
   suspense: SuspenseBoundary | null
 ) {
   const type = vnode.type as ConcreteComponent
+
+  // appContext 即 context
+  // 在createApp 中 context 为默认的createAppContext
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
   const instance: ComponentInternalInstance = {
-    uid: uid++,
+    uid: uid++, // 从0累加
     vnode,
     type,
     parent,
@@ -531,6 +534,7 @@ export function createComponentInstance(
     ec: null,
     sp: null
   }
+  console.log('创建instance实例', instance)
   if (__DEV__) {
     instance.ctx = createDevRenderContext(instance)
   } else {
@@ -573,6 +577,8 @@ export function validateComponentName(name: string, config: AppConfig) {
   }
 }
 
+// 在runtime-core/src/vnode.ts _createVNode 中 我们会根据type来设置vnode.shapeFlag
+// 如果type是object 则 vnode.shapeFlag => ShapeFlags.STATEFUL_COMPONENT
 export function isStatefulComponent(instance: ComponentInternalInstance) {
   return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
 }
@@ -583,6 +589,7 @@ export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false
 ) {
+  debugger
   isInSSRComponentSetup = isSSR
 
   const { props, children } = instance.vnode
@@ -735,6 +742,8 @@ let installWithProxy: (i: ComponentInternalInstance) => void
  * Note the exported method uses any to avoid d.ts relying on the compiler types.
  */
 export function registerRuntimeCompiler(_compile: any) {
+  // 在packages/vue/src/index.ts 中 注册了compiler函数
+  // 在 finishComponentSetup 方法中我们将template compiler为 render函数
   compile = _compile
   installWithProxy = i => {
     if (i.render!._rc) {

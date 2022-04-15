@@ -155,6 +155,18 @@ export const toNumber = (val: any): any => {
   return isNaN(n) ? val : n
 }
 
+// 获取全局this
+// web中的全局this =>window/self
+// webWorker的全局this => self
+// node中的全局this => global
+// 其实在es2020中直接使用globalThis 就可以获取全局的this。const a = globalThis; globalThis会自动区分环境来表示全局this
+// es2020 globalThis babel的代码
+// module.exports =
+//     check(typeof globalThis == 'object' && globalThis) ||
+//     check(typeof window == 'object' && window) ||
+//     check(typeof self == 'object' && self) ||
+//     check(typeof global == 'object' && global) ||
+//     (function () { return this; })() || Function('return this')();
 let _globalThis: any
 export const getGlobalThis = (): any => {
   return (

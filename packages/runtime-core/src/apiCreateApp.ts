@@ -174,29 +174,41 @@ export type CreateAppFunction<HostElement> = (
 
 let uid = 0
 
+// 返回一个具有很多实例方法(components、directive)的app实例
 export function createAppAPI<HostElement>(
   render: RootRenderFunction,
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
+  // 闭包函数
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
+      // 对数据将进行一个深拷贝
       rootComponent = { ...rootComponent }
     }
 
+    // 限定 外界的 createApp 第二个参数必须是对象
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
       rootProps = null
     }
 
+    // createAppContext => 返回app实例上的默认属性
     const context = createAppContext()
     const installedPlugins = new Set()
 
     let isMounted = false
 
+    // 将默认的context 放置在app上
+    // 注意
+    // app上
+    // _component => createApp中第一个参数
+    // _props => 第二个参数
+    // _context => 默认的context
+    //             context.app => app
     const app: App = (context.app = {
       _uid: uid++,
       _component: rootComponent as ConcreteComponent,
-      _props: rootProps,
+      _props: rootProps, // 传入的rootProps 会被放在 app._props 上
       _container: null,
       _context: context,
       _instance: null,
@@ -234,6 +246,7 @@ export function createAppAPI<HostElement>(
       },
 
       mixin(mixin: ComponentOptions) {
+        debugger
         if (__FEATURE_OPTIONS_API__) {
           if (!context.mixins.includes(mixin)) {
             context.mixins.push(mixin)
@@ -251,6 +264,7 @@ export function createAppAPI<HostElement>(
 
       component(name: string, component?: Component): any {
         if (__DEV__) {
+          // 校验组件名称 不能是原生标签；可通过 config.isNativeTag 多配置原生标签
           validateComponentName(name, context.config)
         }
         if (!component) {
@@ -259,6 +273,7 @@ export function createAppAPI<HostElement>(
         if (__DEV__ && context.components[name]) {
           warn(`Component "${name}" has already been registered in target app.`)
         }
+        // 这里的context 即 appContext
         context.components[name] = component
         return app
       },
@@ -279,15 +294,19 @@ export function createAppAPI<HostElement>(
       },
 
       mount(
-        rootContainer: HostElement,
+        rootContainer: HostElement, // 挂载的节点
         isHydrate?: boolean,
         isSVG?: boolean
       ): any {
+        // isMounted 在createApp中定义 默认为false
         if (!isMounted) {
+          // 根据传入的参数获取vNode
+          // 在creatApp中的 mount 这里的 rootComponent 是有template属性的; packages/runtime-dom/src/index.ts => 118 line
           const vnode = createVNode(
-            rootComponent as ConcreteComponent,
-            rootProps
+            rootComponent as ConcreteComponent, // createApp中传入的第一个参数
+            rootProps // createApp中传入的第二个参数
           )
+          debugger
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
@@ -302,6 +321,9 @@ export function createAppAPI<HostElement>(
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
+            // 这个render 是 packages/runtime-core/src/renderer.ts 中 baseCreateRenderer 传入的
+            // vnode 为 根据传入的参数和模板渲染出来的vnode
+            // rootContainer 为真实dom
             render(vnode, rootContainer, isSVG)
           }
           isMounted = true
@@ -353,10 +375,12 @@ export function createAppAPI<HostElement>(
       }
     })
 
+    // 兼容性为false时 __COMPAT__默认为false
     if (__COMPAT__) {
       installAppCompatProperties(app, context, render)
     }
 
+    console.log(`createApp`, `返回一个具有很多属性的app实例对象`, app)
     return app
   }
 }

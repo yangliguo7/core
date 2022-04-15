@@ -232,6 +232,7 @@ export function isShallow(value: unknown): boolean {
   return !!(value && (value as Target)[ReactiveFlags.IS_SHALLOW])
 }
 
+// 判断数据上有没有 ReactiveFlags.RAW || ReactiveFlags.IS_REACTIVE || ReactiveFlags.IS_READONLY
 export function isProxy(value: unknown): boolean {
   return isReactive(value) || isReadonly(value)
 }
