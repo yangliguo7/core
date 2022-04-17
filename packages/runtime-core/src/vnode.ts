@@ -402,7 +402,7 @@ const normalizeRef = ({
 function createBaseVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
-  children: unknown = null,
+  children: unknown = null, // 这个children是指组件下是否有子组件
   patchFlag = 0,
   dynamicProps: string[] | null = null,
   shapeFlag = type === Fragment ? 0 : ShapeFlags.ELEMENT,
@@ -441,6 +441,7 @@ function createBaseVNode(
   // 默认为false
   // 在_creatNode中传入的是true
   if (needFullChildrenNormalization) {
+    // 根据child来重新定义vnode的shapeFlag，同时重新children
     normalizeChildren(vnode, children)
     // normalize suspense children
     if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
@@ -449,7 +450,7 @@ function createBaseVNode(
   } else if (children) {
     // compiled element vnode - if children is passed, only possible types are
     // string or Array.
-    vnode.shapeFlag |= isString(children)
+    vnode.shapeFlag |= isString(children) // <comp>1234</comp> 这里的1234就是字符children
       ? ShapeFlags.TEXT_CHILDREN
       : ShapeFlags.ARRAY_CHILDREN
   }
@@ -511,6 +512,7 @@ function _createVNode(
   }
 
   // isVnode 通过判断type上是否有 __v_isVNode 属性
+  // __v_isVNode 是 packages/runtime-core/src/vnode.ts中createBaseVNode 定义在 vnode 对象上的
   // 如果传入的是一个node则返回一个一摸一样的新node
   if (isVNode(type)) {
     // createVNode receiving an existing vnode. This happens in cases like
@@ -524,6 +526,7 @@ function _createVNode(
   }
 
   // class component normalization.
+  // fixme 举例
   if (isClassComponent(type)) {
     type = type.__vccOpts
   }
@@ -747,13 +750,15 @@ export function cloneIfMounted(child: VNode): VNode {
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown) {
+  debugger
   let type = 0
+  //  _createVNode 方法中 我们根据type 来设置vnode的shapeFlag。见当前 line 564
   const { shapeFlag } = vnode
-  if (children == null) {
+  if (children == null) { // 默认为null
     children = null
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
-  } else if (typeof children === 'object') {
+  } else if (typeof children === 'object') { // slot 和 component
     if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
       // Normalize slot to plain children for plain element and Teleport
       const slot = (children as any).default

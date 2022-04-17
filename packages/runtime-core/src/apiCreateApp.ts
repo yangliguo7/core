@@ -182,7 +182,7 @@ export function createAppAPI<HostElement>(
   // 闭包函数
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
-      // 对数据将进行一个深拷贝
+      // 对数据将进行一个拷贝
       rootComponent = { ...rootComponent }
     }
 
@@ -246,7 +246,6 @@ export function createAppAPI<HostElement>(
       },
 
       mixin(mixin: ComponentOptions) {
-        debugger
         if (__FEATURE_OPTIONS_API__) {
           if (!context.mixins.includes(mixin)) {
             context.mixins.push(mixin)
@@ -306,7 +305,6 @@ export function createAppAPI<HostElement>(
             rootComponent as ConcreteComponent, // createApp中传入的第一个参数
             rootProps // createApp中传入的第二个参数
           )
-          debugger
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context

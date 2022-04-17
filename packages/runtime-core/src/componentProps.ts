@@ -462,7 +462,6 @@ export function normalizePropsOptions(
   appContext: AppContext,
   asMixin = false
 ): NormalizedPropsOptions {
-  debugger
   const cache = appContext.propsCache
   const cached = cache.get(comp)
   if (cached) {

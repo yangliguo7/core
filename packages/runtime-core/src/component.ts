@@ -589,7 +589,6 @@ export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false
 ) {
-  debugger
   isInSSRComponentSetup = isSSR
 
   const { props, children } = instance.vnode

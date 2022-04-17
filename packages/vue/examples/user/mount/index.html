@@ -16,10 +16,17 @@
         }
       },
       template: `
-       <div>
-       <aaa></aaa>
-       <ccc></ccc>
-       </div>
+        <div>
+          <aaa>
+            <template v-slot:aaa>
+              <div>123</div>
+              </template>
+
+            <template v-slot:bbb>
+              <div>234</div>
+            </template>
+          </aaa>
+        </div>
     `,
       props: {
         a: {
@@ -34,7 +41,10 @@
     }
   )
   app.component('aaa', {
-    template: `<div>aaa</div>`
+    template: `<div>aaaAAAAAAAAAA
+          <slot name='aaa'></slot>
+          <slot name='bbb'></slot>
+</div>`
   })
   app.component('ccc', {
     template: `<div>ccc</div><div>ccc</div>`

@@ -22,7 +22,7 @@ const { gzipSync } = require('zlib')
 const { compress } = require('brotli')
 const { targets: allTargets, fuzzyMatchTarget } = require('./utils')
 
-const args = require('minimist')(process.argv.slice(2))
+const args = require('minimist')(process.argv.slice(2)) // 生产环境下解析参数
 const targets = args._
 const formats = args.formats || args.f
 const devOnly = args.devOnly || args.d

@@ -71,7 +71,7 @@ build({
   outfile,
   bundle: true,
   external,
-  sourcemap: true,
+  sourcemap: true, // 配置 sourceMap 默认是 true
   format: outputFormat,
   globalName: pkg.buildOptions?.name,
   platform: format === 'cjs' ? 'node' : 'browser',
