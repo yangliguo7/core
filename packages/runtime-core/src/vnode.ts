@@ -750,6 +750,7 @@ export function cloneIfMounted(child: VNode): VNode {
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown) {
+  debugger
   let type = 0
   //  _createVNode 方法中 我们根据type 来设置vnode的shapeFlag。见当前 line 564
   const { shapeFlag } = vnode
