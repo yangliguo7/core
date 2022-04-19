@@ -363,8 +363,8 @@ function baseCreateRenderer(
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
   const patch: PatchFn = (
-    n1, // 新node
-    n2, // 旧 node
+    n1,// 旧节点
+    n2, // 新节点
     container,// 根容器
     anchor = null,
     parentComponent = null,
@@ -373,11 +373,13 @@ function baseCreateRenderer(
     slotScopeIds = null,
     optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren
   ) => {
+    debugger
     if (n1 === n2) {
       return
     }
 
     // patching & not same type, unmount old tree
+    // isSameVNodeType => 比较两个节点的type key
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
@@ -2319,9 +2321,12 @@ function baseCreateRenderer(
     return hostNextSibling((vnode.anchor || vnode.el)!)
   }
 
+  // render 函数
   const render: RootRenderFunction = (vnode, container, isSVG) => {
+    // _vnode 为createVNODE中定义的标识
     if (vnode == null) {
-      // 什么情况下container上会有_vnode
+      // fixme 什么时候会发生
+      debugger
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
       }

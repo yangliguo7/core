@@ -3,6 +3,10 @@
 import { initDev } from './dev'
 import { warn } from '@vue/runtime-dom'
 
+// 只有 runtime 版本
+// runtime版本，借助vue-loader。将.vue文件 template转换成render函数 (vue cli创建的项目也是这样)
+// 使用webpack打包的时候，将代码进行转换
+
 if (__DEV__) {
   initDev()
 }

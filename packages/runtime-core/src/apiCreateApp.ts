@@ -319,7 +319,7 @@ export function createAppAPI<HostElement>(
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
-            // 这个render 是 packages/runtime-core/src/renderer.ts 中 baseCreateRenderer 传入的
+            // render createAPI中传入的参数 (packages/runtime-core/src/renderer.ts 2323 Line)
             // vnode 为 根据传入的参数和模板渲染出来的vnode
             // rootContainer 为真实dom
             render(vnode, rootContainer, isSVG)

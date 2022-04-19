@@ -16,6 +16,27 @@
  * Check the `patchElement` function in '../../runtime-core/src/renderer.ts' to see how the
  * flags are handled during diff.
  */
+// PatchFlags 是做动态标记的
+// Q：为什么这里需要做左移操作;（二进制标记法）
+// A：
+// TEXT               ===>  00000000001
+// CLASS              ===>  00000000010
+// STYLE              ===>  00000000100
+// PROPS              ===>  00000001000
+// FULL_PROPS         ===>  00000010000
+// HYDRATE_EVENTS     ===>  00000100000
+// STABLE_FRAGMENT    ===>  00001000000
+// KEYED_FRAGMENT     ===>  00010000000
+// UNKEYED_FRAGMENT   ===>  00100000000
+// NEED_PATCH         ===>  01000000000
+// DYNAMIC_SLOTS      ===>  10000000000
+// 注意看1的位置，每一个位上都有1。通过1的位置能知道当前是什么Flag。
+// 比方说 CLASS | STYLE (| 表示或；即0 0 => 0) ===> 00000000110 通过1 能知道这是什么类型；即表示这个值 又有class又有STYLE
+// 并且 如果此时我们需要判断一个数据是否有xx特性，我们通过& 则可判断
+// 比如：判断数据是否有CLASS。
+// 10000000000 & 00000000010 => 肯定是0
+// 00000000110 & 00000000010 => 00000000010 肯定> 0 表示存在这个属性
+// 同时新增一个flag 我只需要在左移一位即可
 export const enum PatchFlags {
   /**
    * Indicates an element with dynamic textContent (children fast path)
@@ -54,6 +75,8 @@ export const enum PatchFlags {
    * diff is always needed to remove the old key. This flag is mutually
    * exclusive with CLASS, STYLE and PROPS.
    */
+  // 这里的key 不是说 下标的那个key。而是说 属性key是动态的
+  // 例: <div :[aaa]='BBB'  ></div> 这里的aaa是动态的
   FULL_PROPS = 1 << 4,
 
   /**
@@ -130,14 +153,14 @@ export const PatchFlagNames = {
   [PatchFlags.CLASS]: `CLASS`,
   [PatchFlags.STYLE]: `STYLE`,
   [PatchFlags.PROPS]: `PROPS`,
-  [PatchFlags.FULL_PROPS]: `FULL_PROPS`,
-  [PatchFlags.HYDRATE_EVENTS]: `HYDRATE_EVENTS`,
-  [PatchFlags.STABLE_FRAGMENT]: `STABLE_FRAGMENT`,
-  [PatchFlags.KEYED_FRAGMENT]: `KEYED_FRAGMENT`,
-  [PatchFlags.UNKEYED_FRAGMENT]: `UNKEYED_FRAGMENT`,
-  [PatchFlags.NEED_PATCH]: `NEED_PATCH`,
-  [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`,
-  [PatchFlags.DEV_ROOT_FRAGMENT]: `DEV_ROOT_FRAGMENT`,
-  [PatchFlags.HOISTED]: `HOISTED`,
-  [PatchFlags.BAIL]: `BAIL`
+  [PatchFlags.FULL_PROPS]: `FULL_PROPS`, // 具有动态 key 属性，当 key 改变时，需要进行完整的 diff 比较
+  [PatchFlags.HYDRATE_EVENTS]: `HYDRATE_EVENTS`, // 具有监听事件的节点
+  [PatchFlags.STABLE_FRAGMENT]: `STABLE_FRAGMENT`, // 子节点顺序不会被改变的 fragment
+  [PatchFlags.KEYED_FRAGMENT]: `KEYED_FRAGMENT`,// 带有 key 属或部分子节点有 key 的 fragment
+  [PatchFlags.UNKEYED_FRAGMENT]: `UNKEYED_FRAGMENT`, // 子节点没有 key 的 fragment
+  [PatchFlags.NEED_PATCH]: `NEED_PATCH`, // 非 props 的比较，比如 ref 或指令
+  [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`, // 动态插槽
+  [PatchFlags.DEV_ROOT_FRAGMENT]: `DEV_ROOT_FRAGMENT`, // 仅供开发时使用，表示将注释放在模板根级别的片段
+  [PatchFlags.HOISTED]: `HOISTED`, // 静态节点
+  [PatchFlags.BAIL]: `BAIL` // diff 算法要退出优化模式
 }

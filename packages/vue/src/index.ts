@@ -7,6 +7,9 @@ import * as runtimeDom from '@vue/runtime-dom'
 import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
 import { InternalRenderFunction } from 'packages/runtime-core/src/component'
 
+// 这是runtime + compiler版本；即 full-build
+// 对于full-build。对于vue文件的解析是放在mount中，根据模板内容进行解析成render函数
+
 if (__DEV__) {
   initDev()
 }
