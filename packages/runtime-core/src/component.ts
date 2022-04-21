@@ -453,7 +453,7 @@ export function createComponentInstance(
 ) {
   const type = vnode.type as ConcreteComponent
 
-  // appContext 即 context
+  // appContext 即 context ; 这里是父类的context
   // 在createApp 中 context 为默认的createAppContext
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
@@ -476,7 +476,7 @@ export function createComponentInstance(
     exposed: null,
     exposeProxy: null,
     withProxy: null,
-    provides: parent ? parent.provides : Object.create(appContext.provides),
+    provides: parent ? parent.provides : Object.create(appContext.provides), // 这里是 provide 和 inject；provide 会一层一层向下
     accessCache: null!,
     renderCache: [],
 
@@ -485,6 +485,9 @@ export function createComponentInstance(
     directives: null,
 
     // resolved props and emits options
+    // 这里normalizePropsOptions 和 normalizeEmitsOptions 主要做了两件事
+    // 1、修改数据；对于字符串数组也将其变为对象
+    // 2、将mixin中的数据也一起合并到instance上
     propsOptions: normalizePropsOptions(type, appContext),
     emitsOptions: normalizeEmitsOptions(type, appContext),
 
@@ -544,6 +547,7 @@ export function createComponentInstance(
   instance.emit = emit.bind(null, instance)
 
   // apply custom element special handling
+  // fixme 这人ce 是干嘛的
   if (vnode.ce) {
     vnode.ce(instance)
   }

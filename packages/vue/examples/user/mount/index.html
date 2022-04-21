@@ -7,61 +7,72 @@
 <script src="../../../dist/vue.global.js"></script>
 
 <script>
-  const app = Vue.createApp(
-    {
-      data() {
-        return {
-          test: 2,
-          name: 'aaa'
-        }
-      },
-      template: `
-        <div>
-          <aaa>
-            <template v-slot:aaa>
-              <div>123</div>
-              </template>
-
-            <template v-slot:bbb>
-              <div>234</div>
-            </template>
-          </aaa>
-        </div>
-    `,
-      props: {
-        a: {
-          type: String
-        }
+  const app = Vue.createApp({
+    data() {
+      return {
+        test: 2,
+        name: 'aaa'
       }
     },
-    {
-      class: ['1', { a: 2 }, '3'], // array | object | str
-      style: ['12312:12313'], // Record<string,string|array|array[][]>,
-      ref: '1'
-    }
-  )
-  app.component('aaa', {
-    template: `<div>aaaAAAAAAAAAA
-          <slot name='aaa'></slot>
-          <slot name='bbb'></slot>
-</div>`
+    template: `
+        <div>
+          <aaa :name='name' :test='test'></aaa>
+        </div>
+    `
+  },{
+    class:'111'
   })
-  app.component('ccc', {
-    template: `<div>ccc</div><div>ccc</div>`
-  })
+    app.component('aaa', {
+      template: `<div>
+                  <p>{{ name }}</p>
+                  <p>{{ test }}</p>
+                  <div @click='aaa'>bbb</div>
+                </div>`,
+      props:['name','test'],
+      methods:{
+        aaa(){
+          alert(1)
+        }
+      }
+
+    })
+  //   app.component('ccc', {
+  //     template: `<div>ccc</div><div>ccc</div>`
+  //   })
+
   app.mixin({
     props: {
+      a: {
+        type: String
+      },
       b: {
-        type: String
+        default: () => {
+          return true
+        }
       }
     }
   })
-  app.mixin({
-    props: {
-      c: {
-        type: String
-      }
-    }
-  })
+  // app.mixin({
+  //   props: ['a-B', 'a-c']
+  // })
+  // app.mixin({
+  //   props: {
+  //     'a-b': ['S'],
+  //     'a-c': () => {
+  //       return 1
+  //     },
+  //     'a-B': {
+  //       type: String
+  //     }
+  //   }
+  // })
+  // app.mixin({
+  //   props: {
+  //     c: {
+  //       type: String
+  //     }
+  //   }
+  // })
+  // app.mixin({})
   app.mount('#aaaa')
 </script>

@@ -106,6 +106,7 @@ const camelizeRE = /-(\w)/g
 /**
  * @private
  */
+// 字符转驼峰 a-b => aB
 export const camelize = cacheStringFunction((str: string): string => {
   return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
 })

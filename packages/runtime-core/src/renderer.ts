@@ -373,7 +373,6 @@ function baseCreateRenderer(
     slotScopeIds = null,
     optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren
   ) => {
-    debugger
     if (n1 === n2) {
       return
     }
@@ -395,6 +394,7 @@ function baseCreateRenderer(
     }
 
     const { type, ref, shapeFlag } = n2
+    // 根据不同的type
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor)
@@ -424,7 +424,8 @@ function baseCreateRenderer(
         )
         break
       default:
-        // fixme 这里 & 作用是什么
+        // Q：为什么这里可以使用 & 判断是否包含
+        // 见 packages/shared/src/patchFlags.ts
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(
             n1,
@@ -439,8 +440,8 @@ function baseCreateRenderer(
           )
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
           processComponent(
-            n1,
-            n2,
+            n1, // 旧节点
+            n2, // 新节点
             container,
             anchor,
             parentComponent,
@@ -1164,9 +1165,10 @@ function baseCreateRenderer(
     }
   }
 
+  // 当type为object时
   const processComponent = (
-    n1: VNode | null, // 新 vnode
-    n2: VNode, // 旧 vnode
+    n1: VNode | null, // 旧 vnode
+    n2: VNode, // 新 vnode
     container: RendererElement,
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
@@ -1176,7 +1178,9 @@ function baseCreateRenderer(
     optimized: boolean
   ) => {
     n2.slotScopeIds = slotScopeIds
+    // n1 == null 表示第一次渲染
     if (n1 == null) {
+      // keepAlive逻辑
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
@@ -1215,6 +1219,8 @@ function baseCreateRenderer(
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
     // 创建instance
+    // instance和vnode一样的行为，但是这只应用于Component类型的组件
+    // 所以和vnode分开，作为一个vnode的拓展，当然vnode.component字段就包含对应的instance（见 initialVNode.component = createComponentInstance）
     // vnode.component == instance == createComponentInstance(fn)
     const instance: ComponentInternalInstance =
       compatMountInstance ||
@@ -2322,6 +2328,8 @@ function baseCreateRenderer(
   }
 
   // render 函数
+  // 这个render 是只针对 createApp 时 app.mount;
+  // 所以对应的parent 都为null
   const render: RootRenderFunction = (vnode, container, isSVG) => {
     // _vnode 为createVNODE中定义的标识
     if (vnode == null) {
@@ -2331,6 +2339,7 @@ function baseCreateRenderer(
         unmount(container._vnode, null, null, true)
       }
     } else {
+      // 这里的parentComponent 是 null
       patch(container._vnode || null, vnode, container, null, null, null, isSVG)
     }
     flushPostFlushCbs()

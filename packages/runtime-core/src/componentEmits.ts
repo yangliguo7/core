@@ -188,6 +188,7 @@ export function emit(
   }
 }
 
+// 返回一个emits 定义 的对象；包含mixin
 export function normalizeEmitsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
@@ -229,6 +230,7 @@ export function normalizeEmitsOptions(
   }
 
   if (isArray(raw)) {
+    // 对于字符串数组、会变成对象，并将key转为驼峰
     raw.forEach(key => (normalized[key] = null))
   } else {
     extend(normalized, raw)
@@ -253,6 +255,7 @@ export function isEmitListener(
     return true
   }
 
+  // 获取纯事件名称
   key = key.slice(2).replace(/Once$/, '')
   return (
     hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||

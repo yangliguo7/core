@@ -156,6 +156,7 @@ export function initProps(
   isStateful: number, // result of bitwise flag comparison
   isSSR = false
 ) {
+  debugger
   const props: Data = {}
   const attrs: Data = {}
   // 属性上定义__vInternal 数值为1
@@ -163,8 +164,10 @@ export function initProps(
   def(attrs, InternalObjectKey, 1)
 
   instance.propsDefaults = Object.create(null)
-
+  debugger
+  // fixme 这里是做什么的
   setFullProps(instance, rawProps, props, attrs)
+  debugger
 
   // ensure all declared prop keys are present
   for (const key in instance.propsOptions[0]) {
@@ -227,7 +230,7 @@ export function updateProps(
       for (let i = 0; i < propsToUpdate.length; i++) {
         let key = propsToUpdate[i]
         // skip if the prop key is a declared emit event listener
-        if (isEmitListener(instance.emitsOptions, key)){
+        if (isEmitListener(instance.emitsOptions, key)) {
           continue
         }
         // PROPS flag guarantees rawProps to be non-null
@@ -337,7 +340,10 @@ function setFullProps(
   props: Data,
   attrs: Data
 ) {
-  // fixme propsOptions 什么时候定义的
+  // packages/runtime-core/src/component.ts => createComponentInstance中
+  // 我们在 instance 上定义 propsOptions; 数据来源于 normalizePropsOptions
+  // options 为 父类的props 和 mixin上的props 对象
+  // needCastKeys 为需要转化的key；(如果type为Boolean 或者 props 有默认值)
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
   let rawCastValues: Data | undefined
@@ -365,13 +371,20 @@ function setFullProps(
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
+      // 当组件的props和mixin上的props 重复时
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
+        // 如果这个key是需要转换的，则往props 上 添加
         if (!needCastKeys || !needCastKeys.includes(camelKey)) {
           props[camelKey] = value
         } else {
+          // 否则往rawCastValues上添加
+          // 这里的意思是说
+          // 往对象rawCastValues上添加一个 key 为 camelKey，值为 value
           ;(rawCastValues || (rawCastValues = {}))[camelKey] = value
         }
+        // 当key不重复时 校验传入的key 是不是 emitOption 上的数据
       } else if (!isEmitListener(instance.emitsOptions, key)) {
+        // emitsOptions 是 normalizeEmitsOptions(packages/runtime-core/src/component.ts)中来的；本身和mixin来的emitOption
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
@@ -382,6 +395,7 @@ function setFullProps(
             continue
           }
         }
+        // 这个attrs 表示的是 独立的props( 不和options重复的props且不是emits的props )
         if (!(key in attrs) || value !== attrs[key]) {
           attrs[key] = value
           hasAttrsChanged = true
@@ -457,11 +471,17 @@ function resolvePropValue(
   return value
 }
 
+// 获取一个key为comp 、值为props的 weakSet
+// 这里的weakSet 包含所有mixin和本身；
 export function normalizePropsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false
 ): NormalizedPropsOptions {
+  debugger
+  // 这里并不是说对props去重
+  // appContext 是父类的appContext (packages/runtime-core/src/component.ts 459Line)
+  // 因此这里的propsCache 是包含父类的propsCache
   const cache = appContext.propsCache
   const cached = cache.get(comp)
   if (cached) {
@@ -469,7 +489,9 @@ export function normalizePropsOptions(
   }
 
   const raw = comp.props
+  // 存储props的 的对象
   const normalized: NormalizedPropsOptions[0] = {}
+  // 存储需要转换的key数组
   const needCastKeys: NormalizedPropsOptions[1] = []
 
   // apply mixin/extends props
@@ -484,12 +506,15 @@ export function normalizePropsOptions(
       extend(normalized, props)
       if (keys) needCastKeys.push(...keys)
     }
+    // 父类如果有mixin
     if (!asMixin && appContext.mixins.length) {
       appContext.mixins.forEach(extendProps)
     }
     if (comp.extends) {
       extendProps(comp.extends)
     }
+    // 本身如果有mixin
+    // 注意 这里可以看出 ；他先执行父类的mixin;然后在执行自身得minxin；因此自身得mixin会替换父类得minxin
     if (comp.mixins) {
       comp.mixins.forEach(extendProps)
     }
@@ -500,17 +525,24 @@ export function normalizePropsOptions(
     return EMPTY_ARR as any
   }
 
+  // props:['A','B']的情况
   if (isArray(raw)) {
     for (let i = 0; i < raw.length; i++) {
       if (__DEV__ && !isString(raw[i])) {
         warn(`props must be strings when using array syntax.`, raw[i])
       }
+      // props => a-b => aB 驼峰
       const normalizedKey = camelize(raw[i])
+      // 对于 $ 开头的props 不做处理；字符会会统一补充value 为 EMPTY_OBJ
       if (validatePropName(normalizedKey)) {
         normalized[normalizedKey] = EMPTY_OBJ
       }
     }
   } else if (raw) {
+    // 针对 props:{
+    //  a:{},
+    //  c:{}
+    // }
     if (__DEV__ && !isObject(raw)) {
       warn(`invalid props options`, raw)
     }
@@ -518,12 +550,17 @@ export function normalizePropsOptions(
       const normalizedKey = camelize(key)
       if (validatePropName(normalizedKey)) {
         const opt = raw[key]
+        // 如果是 props:{propA:['a'], propB:()=>{}} 都会变成 xxx:{ type:xxx }
         const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : opt)
         if (prop) {
+          // 处理针对 props:{ propA: [String] }
           const booleanIndex = getTypeIndex(Boolean, prop.type)
           const stringIndex = getTypeIndex(String, prop.type)
+          // fixme 这里定义的作用是什么
+          // 这个表示 type中 是否有 boolean
           prop[BooleanFlags.shouldCast] = booleanIndex > -1
+          // 这个表示 如果type中没有string 或者 propA中 先Boolean 在 string
           prop[BooleanFlags.shouldCastTrue] =
             stringIndex < 0 || booleanIndex < stringIndex
           // if the prop needs boolean casting or default value
@@ -535,11 +572,13 @@ export function normalizePropsOptions(
     }
   }
 
+  // fixme 为什么这里需要记录needCastKeys
   const res: NormalizedPropsOptions = [normalized, needCastKeys]
   cache.set(comp, res)
   return res
 }
 
+// 校验key不以$ 开头
 function validatePropName(key: string) {
   if (key[0] !== '$') {
     return true
@@ -551,17 +590,19 @@ function validatePropName(key: string) {
 
 // use function string name to check type constructors
 // so that it works across vms / iframes.
+// 这个函数 function xx(){} ; ==> xx; null ==> 'null' ; 其余都是 ''
 function getType(ctor: Prop<any>): string {
   const match = ctor && ctor.toString().match(/^\s*function (\w+)/)
-  return match ? match[1] : ctor === null ? 'null' : ''
+  return match ? match[1] : ctor === null ? 'null' : '' // match[1] 这里是函数名称
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {
   return getType(a) === getType(b)
 }
 
+// 判断原始类型(String、Boolean)在不在
 function getTypeIndex(
-  type: Prop<any>,
+  type: Prop<any>, // 原始类型 String、Boolean
   expectedTypes: PropType<any> | void | null | true
 ): number {
   if (isArray(expectedTypes)) {
