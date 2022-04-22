@@ -479,9 +479,10 @@ export function normalizePropsOptions(
   asMixin = false
 ): NormalizedPropsOptions {
   debugger
-  // 这里并不是说对props去重
   // appContext 是父类的appContext (packages/runtime-core/src/component.ts 459Line)
-  // 因此这里的propsCache 是包含父类的propsCache
+  // 因此这里的propsCache 是包含父类的propsCache。
+  // propsCache是包含全局mixin、组件extend、组件mixin、本身共和的部分
+  // 这里并不是说对props去重。因为对于全局mixin中，在下面的
   const cache = appContext.propsCache
   const cached = cache.get(comp)
   if (cached) {
@@ -506,7 +507,7 @@ export function normalizePropsOptions(
       extend(normalized, props)
       if (keys) needCastKeys.push(...keys)
     }
-    // 父类如果有mixin
+    // 全局如果有mixin; Line 486 会有去重操作;父类本身的mixin是走 Line 519
     if (!asMixin && appContext.mixins.length) {
       appContext.mixins.forEach(extendProps)
     }
@@ -551,6 +552,7 @@ export function normalizePropsOptions(
       if (validatePropName(normalizedKey)) {
         const opt = raw[key]
         // 如果是 props:{propA:['a'], propB:()=>{}} 都会变成 xxx:{ type:xxx }
+        // 这个prop 就是 normalized[normalizedKey]；下面给prop 01 赋值就是给normalized[normalizedKey] 赋值
         const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : opt)
         if (prop) {
