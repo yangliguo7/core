@@ -156,7 +156,7 @@ export function initProps(
   isStateful: number, // result of bitwise flag comparison
   isSSR = false
 ) {
-  debugger
+
   const props: Data = {}
   const attrs: Data = {}
   // 属性上定义__vInternal 数值为1
@@ -164,10 +164,8 @@ export function initProps(
   def(attrs, InternalObjectKey, 1)
 
   instance.propsDefaults = Object.create(null)
-  debugger
   // fixme 这里是做什么的
   setFullProps(instance, rawProps, props, attrs)
-  debugger
 
   // ensure all declared prop keys are present
   for (const key in instance.propsOptions[0]) {
@@ -334,19 +332,21 @@ export function updateProps(
   }
 }
 
+// 这个方式是往props 和 attrs上赋值；
 function setFullProps(
   instance: ComponentInternalInstance,
-  rawProps: Data | null,
-  props: Data,
-  attrs: Data
+  rawProps: Data | null, // 父组件向子组件传入的props数据，(<aaa :name=xxx :age=xxx ref=xx @do=xxx />)
+  props: Data, // 最终的props
+  attrs: Data // 最终的attrs
 ) {
   // packages/runtime-core/src/component.ts => createComponentInstance中
   // 我们在 instance 上定义 propsOptions; 数据来源于 normalizePropsOptions
-  // options 为 父类的props 和 mixin上的props 对象
-  // needCastKeys 为需要转化的key；(如果type为Boolean 或者 props 有默认值)
+  // options NormalizedProps； 为 mixin上的props、本身的props 对象
+  // needCastKeys string []; 为需要转化的key；(如果type为Boolean 或者 props 有默认值)
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
-  let rawCastValues: Data | undefined
+  let rawCastValues: Data | undefined // 需要转换的props 对象
+
   if (rawProps) {
     for (let key in rawProps) {
       // key, ref are reserved and never passed down
@@ -371,18 +371,16 @@ function setFullProps(
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
-      // 当组件的props和mixin上的props 重复时
+      // 如果传入的props匹配到了propsOptions (extend、mixin、本身定义的props)
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
-        // 如果这个key是需要转换的，则往props 上 添加
-        if (!needCastKeys || !needCastKeys.includes(camelKey)) {
+        if (!needCastKeys || !needCastKeys.includes(camelKey)) { // 如果不需要转换
           props[camelKey] = value
         } else {
-          // 否则往rawCastValues上添加
-          // 这里的意思是说
-          // 往对象rawCastValues上添加一个 key 为 camelKey，值为 value
+          // 否则往rawCastValues上添加;rawCastValues 包含 有默认值或者type为Boolean的props下 传入的props数据
+          // 这里的意思是说 往对象rawCastValues上添加一个 key 为 camelKey，值为 value
           ;(rawCastValues || (rawCastValues = {}))[camelKey] = value
         }
-        // 当key不重复时 校验传入的key 是不是 emitOption 上的数据
+        // 如果不是 emitsOptions(extend、mixin、本身 上定义的emits 属性)上的
       } else if (!isEmitListener(instance.emitsOptions, key)) {
         // emitsOptions 是 normalizeEmitsOptions(packages/runtime-core/src/component.ts)中来的；本身和mixin来的emitOption
         // Any non-declared (either as a prop or an emitted event) props are put
@@ -395,7 +393,8 @@ function setFullProps(
             continue
           }
         }
-        // 这个attrs 表示的是 独立的props( 不和options重复的props且不是emits的props )
+        // 假设在组件中传入了 class style aaa bbb 这种属性；则会把他解析为attrs
+        // 这些属性 没定义在propsOptions(属性为 props)和emitsOptions(属性为 emits)
         if (!(key in attrs) || value !== attrs[key]) {
           attrs[key] = value
           hasAttrsChanged = true
@@ -423,26 +422,30 @@ function setFullProps(
   return hasAttrsChanged
 }
 
+// 针对需要转换( type为Boolean;type Boolean、String )的数据进行props解析
 function resolvePropValue(
   options: NormalizedProps,
   props: Data,
   key: string,
   value: unknown,
   instance: ComponentInternalInstance,
-  isAbsent: boolean
+  isAbsent: boolean // 是否没有传入这个参数；用于判断boolean值；比如prop:{ A:[Boolean] }，但是并未传递这个A参数，则isAbsent（!hasOwn(castValues, key)） 为true
 ) {
-  const opt = options[key]
+
+  const opt = options[key] // props上定义的
   if (opt != null) {
     const hasDefault = hasOwn(opt, 'default')
     // default values
-    if (hasDefault && value === undefined) {
+    if (hasDefault && value === undefined) { // 有默认值 并且props上 我未传递这个值
       const defaultValue = opt.default
-      if (opt.type !== Function && isFunction(defaultValue)) {
+      if (opt.type !== Function && isFunction(defaultValue)) { // 针对default为一个函数
+        // initProps 函数中定义为 {}；Line 166
         const { propsDefaults } = instance
         if (key in propsDefaults) {
           value = propsDefaults[key]
         } else {
           setCurrentInstance(instance)
+          // 回调default函数，同时instance.propsDefaults 上赋值属性
           value = propsDefaults[key] = defaultValue.call(
             __COMPAT__ &&
               isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
@@ -456,12 +459,11 @@ function resolvePropValue(
         value = defaultValue
       }
     }
-    // boolean casting
-    if (opt[BooleanFlags.shouldCast]) {
+    if (opt[BooleanFlags.shouldCast]) { // 当type中有Boolean值是 为true
       if (isAbsent && !hasDefault) {
-        value = false
+        value = false // props默认为false
       } else if (
-        opt[BooleanFlags.shouldCastTrue] &&
+        opt[BooleanFlags.shouldCastTrue] && // 当type中没有string 或者 prop中 先 Boolean 在 string；这里只会存在[...Boolean....String .....]这种的情况
         (value === '' || value === hyphenate(key))
       ) {
         value = true
@@ -474,15 +476,14 @@ function resolvePropValue(
 // 获取一个key为comp 、值为props的 weakSet
 // 这里的weakSet 包含所有mixin和本身；
 export function normalizePropsOptions(
-  comp: ConcreteComponent,
-  appContext: AppContext,
-  asMixin = false
+  comp: ConcreteComponent, // component对象
+  appContext: AppContext, // 父类的VNODE.appContext (createAppContext函数返回的context)
+  asMixin = false // 标识是否是mixin；如果是mixin则不处理appContext上的mixin
 ): NormalizedPropsOptions {
-  debugger
-  // appContext 是父类的appContext (packages/runtime-core/src/component.ts 459Line)
-  // 因此这里的propsCache 是包含父类的propsCache。
-  // propsCache是包含全局mixin、组件extend、组件mixin、本身共和的部分
-  // 这里并不是说对props去重。因为对于全局mixin中，在下面的
+  // appContext 是父类的appContext (packages/runtime-core/src/component.ts 459Line)；会一直到root
+  // propsCache是包含全局mixin、组件extend、组件mixin、本身的部分
+  // 这里并不是说对props去重。因为对于全局mixin中，每个组件appContext都会有全局mixin
+  // 这里cache将存储所有的props
   const cache = appContext.propsCache
   const cached = cache.get(comp)
   if (cached) {
@@ -503,24 +504,27 @@ export function normalizePropsOptions(
         raw = raw.options
       }
       hasExtends = true
-      const [props, keys] = normalizePropsOptions(raw, appContext, true)
-      extend(normalized, props)
+      const [props, keys] = normalizePropsOptions(raw, appContext, true) // 注意这里的asMixin为true
+      extend(normalized, props) // 这里会有覆盖的情况，后出现的props会替换之前的
       if (keys) needCastKeys.push(...keys)
     }
     // 全局如果有mixin; Line 486 会有去重操作;父类本身的mixin是走 Line 519
+    // 因为每次循环传递的都是appContext，如果不做一个asMixin判断则会无限递归
     if (!asMixin && appContext.mixins.length) {
       appContext.mixins.forEach(extendProps)
     }
     if (comp.extends) {
       extendProps(comp.extends)
     }
-    // 本身如果有mixin
+    // 本身(即 对象上有mixin属性)如果有mixin
     // 注意 这里可以看出 ；他先执行父类的mixin;然后在执行自身得minxin；因此自身得mixin会替换父类得minxin
     if (comp.mixins) {
       comp.mixins.forEach(extendProps)
     }
   }
 
+  // 不存在props 也会放一个空
+  // fixme 为什么这里需要放一个空对象
   if (!raw && !hasExtends) {
     cache.set(comp, EMPTY_ARR as any)
     return EMPTY_ARR as any
@@ -551,21 +555,22 @@ export function normalizePropsOptions(
       const normalizedKey = camelize(key)
       if (validatePropName(normalizedKey)) {
         const opt = raw[key]
-        // 如果是 props:{propA:['a'], propB:()=>{}} 都会变成 xxx:{ type:xxx }
+        // 如果是 props:{propA:['a'], propB:()=>{},propC:String,,propD:[String,Boolean]} 都会变成 xxx:{ type:xxx }
         // 这个prop 就是 normalized[normalizedKey]；下面给prop 01 赋值就是给normalized[normalizedKey] 赋值
         const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : opt)
         if (prop) {
-          // 处理针对 props:{ propA: [String] }
           const booleanIndex = getTypeIndex(Boolean, prop.type)
           const stringIndex = getTypeIndex(String, prop.type)
-          // fixme 这里定义的作用是什么
           // 这个表示 type中 是否有 boolean
           prop[BooleanFlags.shouldCast] = booleanIndex > -1
-          // 这个表示 如果type中没有string 或者 propA中 先Boolean 在 string
-          prop[BooleanFlags.shouldCastTrue] =
+          // 这个表示 如果type中没有string 或者 propA中 先 Boolean 在 string
+          prop[BooleanFlags.shouldCastTrue] = // type:[String，Boolean.....] 这种情况
             stringIndex < 0 || booleanIndex < stringIndex
+          // 上面这个两个参数的意义在于：在 setFullProps => resolvePropValue 函数中
+          // 针对type为Boolean的props，但是并未传递次props的数据，应该如何设置默认值
           // if the prop needs boolean casting or default value
+          // https://staging-cn.vuejs.org/guide/components/props.html#boolean-casting Boolean 类型转换
           if (booleanIndex > -1 || hasOwn(prop, 'default')) {
             needCastKeys.push(normalizedKey)
           }
@@ -574,7 +579,9 @@ export function normalizePropsOptions(
     }
   }
 
-  // fixme 为什么这里需要记录needCastKeys
+  // normalized 即组件涉及到props( 转换后的props )
+  // needCastKeys 这是记录所有需要转换的参数。当type为Boolean 或者 [String、Boolean] 这种类型，应该特殊处理
+  // setFullProps 函数中，处理传入的props数据会用到
   const res: NormalizedPropsOptions = [normalized, needCastKeys]
   cache.set(comp, res)
   return res
