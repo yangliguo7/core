@@ -152,19 +152,23 @@ export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
 export function initProps(
   instance: ComponentInternalInstance,
-  rawProps: Data | null,
+  rawProps: Data | null, // 标签传入的props数据
   isStateful: number, // result of bitwise flag comparison
   isSSR = false
 ) {
 
-  const props: Data = {}
+  const props: Data = {} // 真实props数据
   const attrs: Data = {}
+
+  // 你可以简单理解 props + attrs => rawProps (在不考虑edge case情况下)
+
   // 属性上定义__vInternal 数值为1
   // def => Object.defineProperty
   def(attrs, InternalObjectKey, 1)
-
+  // 在setFullProps -> resolvePropValue 时，会给propsDefaults赋值
+  // 所有default的值（本身 mixin extend ...）
   instance.propsDefaults = Object.create(null)
-  // fixme 这里是做什么的
+  // 给 props 和 attrs 赋值
   setFullProps(instance, rawProps, props, attrs)
 
   // ensure all declared prop keys are present
@@ -176,11 +180,11 @@ export function initProps(
 
   // validation
   if (__DEV__) {
+    // 校验 props required、validate、type 等情况
     validateProps(rawProps || {}, props, instance)
   }
 
-  if (isStateful) {
-    // stateful
+  if (isStateful) { // 是否是有状态的( ShapeFlags 是否是 STATEFUL_COMPONENT )
     instance.props = isSSR ? props : shallowReactive(props)
   } else {
     if (!instance.type.props) {
@@ -328,11 +332,12 @@ export function updateProps(
   }
 
   if (__DEV__) {
+    // 校验 props required、validate、type 等情况
     validateProps(rawProps || {}, props, instance)
   }
 }
 
-// 这个方式是往props 和 attrs上赋值；
+// 这个方式是往 props 和 attrs上赋值；
 function setFullProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null, // 父组件向子组件传入的props数据，(<aaa :name=xxx :age=xxx ref=xx @do=xxx />)
@@ -631,7 +636,7 @@ function validateProps(
   instance: ComponentInternalInstance
 ) {
   const resolvedValues = toRaw(props)
-  const options = instance.propsOptions[0]
+  const options = instance.propsOptions[0] // 这里的0 是组件关联的所有component props。全数据
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue

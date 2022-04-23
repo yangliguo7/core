@@ -458,7 +458,7 @@ export function createComponentInstance(
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
-  
+
 
   const instance: ComponentInternalInstance = {
     uid: uid++, // 从0累加
@@ -540,7 +540,7 @@ export function createComponentInstance(
     sp: null
   }
   console.log('创建instance实例', instance)
-  
+
   if (__DEV__) {
     instance.ctx = createDevRenderContext(instance)
   } else {
@@ -597,9 +597,10 @@ export function setupComponent(
   isSSR = false
 ) {
   isInSSRComponentSetup = isSSR
-  
-  const { props, children } = instance.vnode
+
+  const { props, children } = instance.vnode // 这个props 只是 vnode上的；即render函数上传入的
   const isStateful = isStatefulComponent(instance)
+  // 往instance上 绑定最终的props、attrs
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children)
 
@@ -818,7 +819,7 @@ export function finishComponentSetup(
         }
       }
     }
-    
+
     instance.render = (Component.render || NOOP) as InternalRenderFunction
 
     // for runtime-compiled render functions using `with` blocks, the render

@@ -17,7 +17,7 @@
       },
       template: `
         <div>
-          <aaa :name='name' :test='test' @testEmit='testEmit' ref='aa></aaa>
+          <aaa :name='name' :test='test' @testEmit='testEmit' ref='aa'></aaa>
         </div>
     `,
       props: ['root1', 'root2'],
@@ -45,10 +45,18 @@
 
                   <ccc></ccc>
                 </div>`,
-    props: ['aaaProps1', 'aaaProps2'],
+    props: ['name', 'test'],
     mixins: [
       {
-        props: ['aaaMixinProps1', 'aaaMixinProps2']
+        props: {
+          aaaMixinProps1: String,
+          aaaMixinProps2: String,
+          aaaa: {
+            default() {
+              return '1'
+            }
+          }
+        }
       }
     ],
     emits: {
