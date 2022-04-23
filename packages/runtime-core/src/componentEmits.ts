@@ -188,19 +188,21 @@ export function emit(
   }
 }
 
+// 与 normalizePropsOptions 逻辑类似
 // 返回一个emits 定义 的对象；包含mixin
 export function normalizeEmitsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false
 ): ObjectEmitsOptions | null {
+  // 存储从上游到自生所有相关的emits 包含mixin中的
   const cache = appContext.emitsCache
   const cached = cache.get(comp)
   if (cached !== undefined) {
     return cached
   }
 
-  const raw = comp.emits
+  const raw = comp.emits // 写到components中emits属性才会被识别到
   let normalized: ObjectEmitsOptions = {}
 
   // apply mixin/extends props
@@ -226,7 +228,7 @@ export function normalizeEmitsOptions(
 
   if (!raw && !hasExtends) {
     cache.set(comp, null)
-    return null
+    return null // 这里return null ；因此不会往 normalized 上放置属性
   }
 
   if (isArray(raw)) {

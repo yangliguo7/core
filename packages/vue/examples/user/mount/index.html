@@ -7,50 +7,83 @@
 <script src="../../../dist/vue.global.js"></script>
 
 <script>
-  const app = Vue.createApp({
-    data() {
-      return {
-        test: 2,
-        name: 'aaa'
+  const app = Vue.createApp(
+    {
+      data() {
+        return {
+          test: 2,
+          name: 'aaa'
+        }
+      },
+      template: `
+        <div>
+          <aaa :name='name' :test='test' @testEmit='testEmit' ref='aa></aaa>
+        </div>
+    `,
+      props: ['root1', 'root2'],
+      mixins: [
+        {
+          props: ['mixinRoot1', 'mixinRoot2']
+        }
+      ],
+      methods: {
+        testEmit(val) {
+          alert(2)
+        }
       }
     },
-    template: `
-        <div>
-          <aaa :name='name' :test='test'></aaa>
-        </div>
-    `
-  },{
-    class:'111'
-  })
-    app.component('aaa', {
-      template: `<div>
+    {
+      class: '111'
+    }
+  )
+
+  app.component('aaa', {
+    template: `<div>
                   <p>{{ name }}</p>
                   <p>{{ test }}</p>
                   <div @click='aaa'>bbb</div>
-                </div>`,
-      props:['name','test'],
-      methods:{
-        aaa(){
-          alert(1)
-        }
-      }
 
-    })
-  //   app.component('ccc', {
-  //     template: `<div>ccc</div><div>ccc</div>`
-  //   })
+                  <ccc></ccc>
+                </div>`,
+    props: ['aaaProps1', 'aaaProps2'],
+    mixins: [
+      {
+        props: ['aaaMixinProps1', 'aaaMixinProps2']
+      }
+    ],
+    emits: {
+      'test-emit': val => {
+        return false
+      }
+    },
+    methods: {
+      aaa() {
+        alert(1)
+        this.$emit('test-emit', 1)
+      }
+    }
+  })
+  app.component('ccc', {
+    template: `<div>ccc</div><div>ccc</div>`,
+    props: ['cccProps1']
+  })
 
   app.mixin({
     props: {
-      a: {
-        type: String
+      globalMixin1: {
+        type: [Boolean, String]
       },
-      b: {
+      globalMixin2: {
         default: () => {
           return true
         }
       }
-    }
+    },
+    mixins: [
+      {
+        props: ['globalMixinMixin1', 'globalMixinMixin2']
+      }
+    ]
   })
   // app.mixin({
   //   props: ['a-B', 'a-c']

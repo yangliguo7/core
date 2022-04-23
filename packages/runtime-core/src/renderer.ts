@@ -2334,7 +2334,7 @@ function baseCreateRenderer(
     // _vnode 为createVNODE中定义的标识
     if (vnode == null) {
       // fixme 什么时候会发生
-      debugger
+      
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
       }

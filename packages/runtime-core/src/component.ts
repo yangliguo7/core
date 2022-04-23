@@ -458,6 +458,7 @@ export function createComponentInstance(
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
+  
 
   const instance: ComponentInternalInstance = {
     uid: uid++, // 从0累加
@@ -488,7 +489,8 @@ export function createComponentInstance(
     // 这里normalizePropsOptions 和 normalizeEmitsOptions 主要做了两件事
     // 1、修改数据；对于字符串数组也将其变为对象
     // 2、将mixin中的数据也一起合并到instance上
-    propsOptions: normalizePropsOptions(type, appContext),
+    // normalize 完后；会获得一个与之关联的 包含 props emits 所有component/mixin；
+    propsOptions: normalizePropsOptions(type, appContext), // {  propsA:xxxx,propB:xxxx,propC:xxxx  }
     emitsOptions: normalizeEmitsOptions(type, appContext),
 
     // emit
@@ -538,16 +540,17 @@ export function createComponentInstance(
     sp: null
   }
   console.log('创建instance实例', instance)
+  
   if (__DEV__) {
     instance.ctx = createDevRenderContext(instance)
   } else {
     instance.ctx = { _: instance }
   }
   instance.root = parent ? parent.root : instance
-  instance.emit = emit.bind(null, instance)
+  instance.emit = emit.bind(null, instance) // 这里绑定了instance;所以你emit不传参数也会有参数
 
   // apply custom element special handling
-  // fixme 这人ce 是干嘛的
+  // fixme 这人ce 是干嘛的 custom element ?
   if (vnode.ce) {
     vnode.ce(instance)
   }
@@ -594,7 +597,7 @@ export function setupComponent(
   isSSR = false
 ) {
   isInSSRComponentSetup = isSSR
-
+  
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
@@ -808,13 +811,14 @@ export function finishComponentSetup(
             extend(finalCompilerOptions.compatConfig, Component.compatConfig)
           }
         }
+        // render函数 是通过compiler来得
         Component.render = compile(template, finalCompilerOptions)
         if (__DEV__) {
           endMeasure(instance, `compile`)
         }
       }
     }
-
+    
     instance.render = (Component.render || NOOP) as InternalRenderFunction
 
     // for runtime-compiled render functions using `with` blocks, the render
