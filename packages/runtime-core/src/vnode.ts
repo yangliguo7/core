@@ -557,7 +557,6 @@ function _createVNode(
       props.style = normalizeStyle(style)
     }
   }
-
   // encode the vnode type information into a bitmap
   // shapeFlag 的作用是为了后面patch做准备
   // 如果你是从createApp中进入的 那这个type只有两种情况 object/function
@@ -750,13 +749,12 @@ export function cloneIfMounted(child: VNode): VNode {
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown) {
-  debugger
   let type = 0
   //  _createVNode 方法中 我们根据type 来设置vnode的shapeFlag。见当前 line 564
   const { shapeFlag } = vnode
-  if (children == null) { // 默认为null
+  if (children == null) { // 默认为null <component>aaaa</component> 这里的aaaa就是children
     children = null
-  } else if (isArray(children)) {
+  } else if (isArray(children)) { // fixme 什么情况下children是Array
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') { // slot 和 component
     if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
@@ -789,10 +787,10 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
         }
       }
     }
-  } else if (isFunction(children)) {
+  } else if (isFunction(children)) { // fixme 什么情况下children是function
     children = { default: children, _ctx: currentRenderingInstance }
     type = ShapeFlags.SLOTS_CHILDREN
-  } else {
+  } else { // fixme 什么情况下会走这里
     children = String(children)
     // force teleport children to array so it can be moved around
     if (shapeFlag & ShapeFlags.TELEPORT) {

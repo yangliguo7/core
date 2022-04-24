@@ -6,6 +6,8 @@
 
 <script src="../../../dist/vue.global.js"></script>
 
+
+
 <script>
   const app = Vue.createApp(
     {
@@ -17,7 +19,14 @@
       },
       template: `
         <div>
-          <aaa :name='name' :test='test' @testEmit='testEmit' ref='aa'></aaa>
+          <aaa :name='name' :test='test' @testEmit='testEmit' ref='aa'>
+            <template #slotTest>
+              <div >{{name}}111111111111</div>
+            </template>
+            <template #slotTest2>
+              <div >{{name}}111111111111</div>
+            </template>
+          </aaa>
         </div>
     `,
       props: ['root1', 'root2'],
@@ -39,10 +48,10 @@
 
   app.component('aaa', {
     template: `<div>
+                  <slot name='slotTest'></slot>
                   <p>{{ name }}</p>
                   <p>{{ test }}</p>
                   <div @click='aaa'>bbb</div>
-
                   <ccc></ccc>
                 </div>`,
     props: ['name', 'test'],

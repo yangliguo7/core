@@ -459,7 +459,6 @@ export function createComponentInstance(
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
-
   const instance: ComponentInternalInstance = {
     uid: uid++, // 从0累加
     vnode,
@@ -541,6 +540,7 @@ export function createComponentInstance(
   }
   console.log('创建instance实例', instance)
   if (__DEV__) {
+    // instance.ctx 挂载了 this上的相关属性用于调试
     instance.ctx = createDevRenderContext(instance)
   } else {
     instance.ctx = { _: instance }
@@ -574,6 +574,7 @@ export const unsetCurrentInstance = () => {
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
 
+// 校验组件名称不能为内置组件名称(slot,component)；或者先前config定义的isNativeTag
 export function validateComponentName(name: string, config: AppConfig) {
   const appIsNativeTag = config.isNativeTag || NO
   if (isBuiltInTag(name) || appIsNativeTag(name)) {
@@ -595,12 +596,14 @@ export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false
 ) {
+  debugger
   isInSSRComponentSetup = isSSR
 
   const { props, children } = instance.vnode // 这个props 只是 vnode上的；即render函数上传入的
   const isStateful = isStatefulComponent(instance)
-  // 往instance上 绑定最终的props、attrs
+  // 往instance上 绑定最终的 props、attrs
   initProps(instance, props, isStateful, isSSR)
+  // 往instance上 绑定 slots（children）
   initSlots(instance, children)
 
   const setupResult = isStateful
@@ -614,18 +617,25 @@ function setupStatefulComponent(
   instance: ComponentInternalInstance,
   isSSR: boolean
 ) {
+  // instance.type ===  vnode.type ( createComponentInstance 函数 Line 466 )
+  // vnode.type === createBaseVNode( packages/runtime-core/src/vnode.ts Line 415 )  定义
+  // 传入的第一个参数就是type => 整个component对象
   const Component = instance.type as ComponentOptions
 
   if (__DEV__) {
+    // instance.appContext.config => vue.config.js / app.config
     if (Component.name) {
+      // 校验当前name名称
       validateComponentName(Component.name, instance.appContext.config)
     }
+    // 校验组件name
     if (Component.components) {
       const names = Object.keys(Component.components)
       for (let i = 0; i < names.length; i++) {
         validateComponentName(names[i], instance.appContext.config)
       }
     }
+    // 校验指令名称
     if (Component.directives) {
       const names = Object.keys(Component.directives)
       for (let i = 0; i < names.length; i++) {
@@ -644,12 +654,18 @@ function setupStatefulComponent(
   instance.accessCache = Object.create(null)
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
+  // fixme 为什么这里需要配置代理
+  // instance.ctx 为 createComponentInstance 中 赋值。
+  // 在dev下 是this上的一些属性：publicPropertiesMap ( packages/runtime-core/src/componentPublicInstance.ts 226 Line ); 生产环境下为 { _:instance }
   instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))
   if (__DEV__) {
+    // 给ctx上 定义propsOptions[0] （组件涉及到的props）
     exposePropsOnRenderContext(instance)
   }
+  // vue3 新特性；注意这里并不是<script setup>；而是 { setup(){} }
   // 2. call setup()
   const { setup } = Component
+  debugger
   if (setup) {
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
@@ -824,6 +840,7 @@ export function finishComponentSetup(
         if (__DEV__) {
           endMeasure(instance, `compile`)
         }
+        debugger
       }
     }
 

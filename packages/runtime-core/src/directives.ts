@@ -63,6 +63,7 @@ export type Directive<T = any, V = any> =
 
 export type DirectiveModifiers = Record<string, boolean>
 
+// 校验指令名称不能为内置指令
 export function validateDirectiveName(name: string) {
   if (isBuiltInDirective(name)) {
     warn('Do not use built-in directive ids as custom directive id: ' + name)

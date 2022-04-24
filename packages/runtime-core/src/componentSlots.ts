@@ -130,8 +130,12 @@ export const initSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren
 ) => {
+  // 这里使用 & 用来确认数据就很方便了
+  // 因为_createVnode（packages/runtime-core/src/vnode.ts）中我们根据template 来定义shapeFlag。比方是4 (000001)
+  // 在createBaseVNode=> normalizeChildren 根据子元素来重新定义来定义shapeFlag。如果有slot (100000)；对其或(|)变成 100001
+  // 这里通过 与 即可知道shapeFlag 是否有SLOTS_CHILDREN(100000);
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
-    const type = (children as RawSlots)._
+    const type = (children as RawSlots)._ // fixme 这是什么
     if (type) {
       // users can get the shallow readonly version of the slots object through `this.$slots`,
       // we should avoid the proxy object polluting the slots of the internal instance
