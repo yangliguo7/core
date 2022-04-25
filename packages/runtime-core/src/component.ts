@@ -564,6 +564,7 @@ export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
 
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
   currentInstance = instance
+  // 473 Line new EffectScope( true )
   instance.scope.on()
 }
 
@@ -667,11 +668,13 @@ function setupStatefulComponent(
   const { setup } = Component
   debugger
   if (setup) {
-    const setupContext = (instance.setupContext =
+    // 一个具有 attrs、slots、emit、expose 对应 getter setter 的对象
+    const setupContext = (instance.setupContext = // setup.length > 1 指的是函数是否有参数
       setup.length > 1 ? createSetupContext(instance) : null)
-
+    // instance.scope.on()
     setCurrentInstance(instance)
     pauseTracking()
+    // 这里可以看到 setup 第一个参数是instance.props 第二个参数就是包含attrs、slots、emit、expose 的对象。
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -682,6 +685,7 @@ function setupStatefulComponent(
     unsetCurrentInstance()
 
     if (isPromise(setupResult)) {
+      // setup 如果返回一个promise 需要配合 Suspense 组件
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
@@ -712,6 +716,7 @@ function setupStatefulComponent(
         )
       }
     } else {
+      // 这里最后也会调用 finishComponentSetup
       handleSetupResult(instance, setupResult, isSSR)
     }
   } else {
@@ -725,12 +730,14 @@ export function handleSetupResult(
   isSSR: boolean
 ) {
   if (isFunction(setupResult)) {
+    // setup 也可以返回render函数
     // setup returned an inline render function
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
       // set it as ssrRender instead.
       instance.ssrRender = setupResult
     } else {
+      // 重新设置render函数
       instance.render = setupResult as InternalRenderFunction
     }
   } else if (isObject(setupResult)) {
@@ -745,8 +752,10 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
+    // 将setup上返回的数据包装一个proxy 赋值给 setupState
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
+      // 校验导出的数据，不应该以 $ _ 开头
       exposeSetupStateOnRenderContext(instance)
     }
   } else if (__DEV__ && setupResult !== undefined) {
@@ -800,6 +809,7 @@ export function finishComponentSetup(
     }
   }
 
+  // handleSetupResult 函数中；我们处理 setup对象，如果setup已经定义了render函数
   // template / render function normalization
   // could be already set when returned from setup()
   if (!instance.render) {
@@ -809,13 +819,18 @@ export function finishComponentSetup(
       const template =
         (__COMPAT__ &&
           instance.vnode.props &&
-          instance.vnode.props['inline-template']) ||
+          instance.vnode.props['inline-template']) || // vue2 inline-template
         Component.template
       if (template) {
+        debugger
         if (__DEV__) {
           startMeasure(instance, `compile`)
         }
         const { isCustomElement, compilerOptions } = instance.appContext.config
+        // 注意 这个只能是full build版本才能在Component中定义
+        // 如果你是使用脚手架(webpack\vite) 等构建的runtime-only版本的话，则在vue.config.js中定义编译选项
+        // @link https://staging-cn.vuejs.org/api/application.html#appconfigcompileroptions
+        // delimiters 调整模板内用于文本插值的分隔符。 默认 ['{{', '}}']
         const { delimiters, compilerOptions: componentCompilerOptions } =
           Component
         const finalCompilerOptions: CompilerOptions = extend(
@@ -849,6 +864,7 @@ export function finishComponentSetup(
     // for runtime-compiled render functions using `with` blocks, the render
     // proxy used needs a different `has` handler which is more performant and
     // also only allows a whitelist of globals to fallthrough.
+    // 在runtime-compiler中 我们定义了installWithProxy (registerRuntimeCompiler Line 783)
     if (installWithProxy) {
       installWithProxy(instance)
     }
