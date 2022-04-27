@@ -597,7 +597,6 @@ export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false
 ) {
-  debugger
   isInSSRComponentSetup = isSSR
 
   const { props, children } = instance.vnode // 这个props 只是 vnode上的；即render函数上传入的
@@ -666,7 +665,6 @@ function setupStatefulComponent(
   // vue3 新特性；注意这里并不是<script setup>；而是 { setup(){} }
   // 2. call setup()
   const { setup } = Component
-  debugger
   if (setup) {
     // 一个具有 attrs、slots、emit、expose 对应 getter setter 的对象
     const setupContext = (instance.setupContext = // setup.length > 1 指的是函数是否有参数
@@ -781,10 +779,12 @@ let installWithProxy: (i: ComponentInternalInstance) => void
  * Note the exported method uses any to avoid d.ts relying on the compiler types.
  */
 export function registerRuntimeCompiler(_compile: any) {
+  debugger
   // 在packages/vue/src/index.ts 中 注册了compiler函数
   // 在 finishComponentSetup 方法中我们将template compiler为 render函数
   compile = _compile
   installWithProxy = i => {
+    debugger
     if (i.render!._rc) {
       i.withProxy = new Proxy(i.ctx, RuntimeCompiledPublicInstanceProxyHandlers)
     }
@@ -822,7 +822,6 @@ export function finishComponentSetup(
           instance.vnode.props['inline-template']) || // vue2 inline-template
         Component.template
       if (template) {
-        debugger
         if (__DEV__) {
           startMeasure(instance, `compile`)
         }
@@ -855,7 +854,6 @@ export function finishComponentSetup(
         if (__DEV__) {
           endMeasure(instance, `compile`)
         }
-        debugger
       }
     }
 

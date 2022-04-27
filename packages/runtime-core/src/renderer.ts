@@ -424,7 +424,6 @@ function baseCreateRenderer(
         )
         break
       default:
-        // Q：为什么这里可以使用 & 判断是否包含
         // 见 packages/shared/src/patchFlags.ts
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(
@@ -1249,8 +1248,9 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
-      // 将模板转化为render函数 根据render 函数进行 下一步操作
+      // 将模板转化为render函数(instance.render) 根据render 函数进行 下一步操作
       setupComponent(instance)
+      debugger
       if (__DEV__) {
         endMeasure(instance, `init`)
       }
@@ -1331,7 +1331,7 @@ function baseCreateRenderer(
     optimized
   ) => {
     const componentUpdateFn = () => {
-      if (!instance.isMounted) {
+      if (!instance.isMounted) { // 默认是false
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
         const { bm, m, parent } = instance
@@ -1339,7 +1339,7 @@ function baseCreateRenderer(
 
         toggleRecurse(instance, false)
         // beforeMount hook
-        if (bm) {
+        if (bm) { // fixme instance 默认是null ; 那这个什么时候赋值的呢?
           invokeArrayFns(bm)
         }
         // onVnodeBeforeMount
@@ -1572,11 +1572,11 @@ function baseCreateRenderer(
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
       () => queueJob(instance.update),
-      instance.scope // track it in component's effect scope
+      instance.scope // track it in component's effect scope  默认 new EffectScope(true /* detached */)
     ))
 
     const update = (instance.update = effect.run.bind(effect) as SchedulerJob)
-    update.id = instance.uid
+    update.id = instance.uid // 唯一id
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
     toggleRecurse(instance, true)
