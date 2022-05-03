@@ -779,12 +779,10 @@ let installWithProxy: (i: ComponentInternalInstance) => void
  * Note the exported method uses any to avoid d.ts relying on the compiler types.
  */
 export function registerRuntimeCompiler(_compile: any) {
-  debugger
   // 在packages/vue/src/index.ts 中 注册了compiler函数
   // 在 finishComponentSetup 方法中我们将template compiler为 render函数
   compile = _compile
   installWithProxy = i => {
-    debugger
     if (i.render!._rc) {
       i.withProxy = new Proxy(i.ctx, RuntimeCompiledPublicInstanceProxyHandlers)
     }

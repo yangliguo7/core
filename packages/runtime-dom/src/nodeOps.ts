@@ -23,6 +23,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       ? doc.createElementNS(svgNS, tag)
       : doc.createElement(tag, is ? { is } : undefined)
 
+    // 原生select 标签
     if (tag === 'select' && props && props.multiple != null) {
       ;(el as HTMLSelectElement).setAttribute('multiple', props.multiple)
     }

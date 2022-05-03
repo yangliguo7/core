@@ -43,6 +43,7 @@ let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 
 let enabledHydration = false
 
+// 渲染器对象
 // 这里返回的render 有三个属性 render、hydrate、createApp(createApp是一个函数)
 function ensureRenderer() {
   // 1. 如果没有render则才会创建render实例

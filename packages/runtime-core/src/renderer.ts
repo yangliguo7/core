@@ -237,7 +237,7 @@ type UnmountChildrenFn = (
   start?: number
 ) => void
 
-export type MountComponentFn = (
+export type MountComponentFn =  (
   initialVNode: VNode,
   container: RendererElement,
   anchor: RendererNode | null,
@@ -362,6 +362,7 @@ function baseCreateRenderer(
 
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
+  // 1、挂载Vnode 2、更新vnode
   const patch: PatchFn = (
     n1,// 旧节点
     n2, // 新节点
@@ -372,8 +373,8 @@ function baseCreateRenderer(
     isSVG = false,
     slotScopeIds = null,
     optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren
-  ) => {
-    if (n1 === n2) {
+  ) =>   {
+    if (n1 === n2)  {
       return
     }
 
@@ -624,7 +625,7 @@ function baseCreateRenderer(
     }
   }
 
-  const mountElement = (
+  const  mountElement = (
     vnode: VNode,
     container: RendererElement,
     anchor: RendererNode | null,
@@ -634,6 +635,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
+    debugger
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
     const { type, props, shapeFlag, transition, patchFlag, dirs } = vnode
@@ -649,6 +651,7 @@ function baseCreateRenderer(
       // only do this in production since cloned trees cannot be HMR updated.
       el = vnode.el = hostCloneNode(vnode.el)
     } else {
+      // 创建dom节点
       el = vnode.el = hostCreateElement(
         vnode.type as string,
         isSVG,
@@ -661,6 +664,7 @@ function baseCreateRenderer(
       if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         hostSetElementText(el, vnode.children as string)
       } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 深度优先
         mountChildren(
           vnode.children as VNodeArrayChildren,
           el,
@@ -673,13 +677,15 @@ function baseCreateRenderer(
         )
       }
 
-      if (dirs) {
+      if (dirs) { // fixme 这个属性是做什么的
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
-      // props
+      // props 只针对dom的props
       if (props) {
         for (const key in props) {
           if (key !== 'value' && !isReservedProp(key)) {
+            // 在createApp阶段就已经定义了hostPatchProp的实现
+            // packages/runtime-dom/src/index.ts rendererOptions ==> packages/runtime-dom/src/patchProp.ts  patchProp
             hostPatchProp(
               el,
               key,
@@ -734,6 +740,8 @@ function baseCreateRenderer(
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
+    // 插入节点
+    // 注意:先处理的子节点(mountChildren)在执行的hostInsert；因此是先子节点在父节点
     hostInsert(el, container, anchor)
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
@@ -1178,7 +1186,7 @@ function baseCreateRenderer(
   ) => {
     n2.slotScopeIds = slotScopeIds
     // n1 == null 表示第一次渲染
-    if (n1 == null) {
+    if (n1 == null)  {
       // keepAlive逻辑
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
@@ -1217,7 +1225,7 @@ function baseCreateRenderer(
     // mounting
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
-    // 创建instance
+    // 创建组件instance
     // instance和vnode一样的行为，但是这只应用于Component类型的组件
     // 所以和vnode分开，作为一个vnode的拓展，当然vnode.component字段就包含对应的instance（见 initialVNode.component = createComponentInstance）
     // vnode.component == instance == createComponentInstance(fn)
@@ -1248,9 +1256,9 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
+      // 设置组件实例
       // 将模板转化为render函数(instance.render) 根据render 函数进行 下一步操作
       setupComponent(instance)
-      debugger
       if (__DEV__) {
         endMeasure(instance, `init`)
       }
@@ -1270,6 +1278,7 @@ function baseCreateRenderer(
       return
     }
 
+    // 设置并运行带副作用的渲染函数
     setupRenderEffect(
       instance,
       initialVNode,
@@ -1331,6 +1340,8 @@ function baseCreateRenderer(
     optimized
   ) => {
     const componentUpdateFn = () => {
+      debugger
+      // 创建
       if (!instance.isMounted) { // 默认是false
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
@@ -1363,6 +1374,7 @@ function baseCreateRenderer(
             if (__DEV__) {
               startMeasure(instance, `render`)
             }
+            // 生成subTree
             instance.subTree = renderComponentRoot(instance)
             if (__DEV__) {
               endMeasure(instance, `render`)
@@ -1397,6 +1409,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             startMeasure(instance, `render`)
           }
+          // 生成子节点 subTree 是根据render函数渲染出来的
           const subTree = (instance.subTree = renderComponentRoot(instance))
           if (__DEV__) {
             endMeasure(instance, `render`)
@@ -1467,6 +1480,7 @@ function baseCreateRenderer(
         // #2458: deference mount-only object parameters to prevent memleaks
         initialVNode = container = anchor = null as any
       } else {
+        //  跟新组件
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)

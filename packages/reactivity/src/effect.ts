@@ -84,7 +84,6 @@ export class ReactiveEffect<T = any> {
   }
 
   run() {
-    debugger
     if (!this.active) {
       return this.fn()
     }

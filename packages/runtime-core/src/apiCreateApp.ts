@@ -292,6 +292,7 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      // 真实的mount函数；里面的逻辑都是和平台无关的
       mount(
         rootContainer: HostElement, // 挂载的节点
         isHydrate?: boolean,
