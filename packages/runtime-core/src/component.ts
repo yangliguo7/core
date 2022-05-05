@@ -780,7 +780,7 @@ let installWithProxy: (i: ComponentInternalInstance) => void
  */
 export function registerRuntimeCompiler(_compile: any) {
   // 在packages/vue/src/index.ts 中 注册了compiler函数
-  // 在 finishComponentSetup 方法中我们将template compiler为 render函数
+  // 在  finishComponentSetup 方法中我们将template compiler为 render函数
   compile = _compile
   installWithProxy = i => {
     if (i.render!._rc) {

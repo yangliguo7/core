@@ -635,7 +635,6 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
-    debugger
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
     const { type, props, shapeFlag, transition, patchFlag, dirs } = vnode
@@ -1297,6 +1296,7 @@ function baseCreateRenderer(
 
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
     const instance = (n2.component = n1.component)!
+    // 根据新旧两个节点的 props、children、dirs、transition 来比较是否需要更新
     if (shouldUpdateComponent(n1, n2, optimized)) {
       if (
         __FEATURE_SUSPENSE__ &&
@@ -1480,10 +1480,12 @@ function baseCreateRenderer(
         // #2458: deference mount-only object parameters to prevent memleaks
         initialVNode = container = anchor = null as any
       } else {
+        debugger
         //  跟新组件
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)
+        // next 表示是否有新的组件vnode
         let { next, bu, u, parent, vnode } = instance
         let originNext = next
         let vnodeHook: VNodeHook | null | undefined
@@ -1493,10 +1495,15 @@ function baseCreateRenderer(
 
         // Disallow component effect recursion during pre-lifecycle hooks.
         toggleRecurse(instance, false)
+        // 在组件更新逻辑中，如果组件更新则在instance上赋值next；见updateComponent函数 Line 1318
+        // 如果父组件在跟新过程中如果子组件也需要重新渲染则会有next；数值为新的子vnode
         if (next) {
           next.el = vnode.el
+          // 跟新 props/ slots
+          // 因为在下面会执行 renderComponentRoot 重新生成subtree;这时候需要保证组件上的数据是最新的
           updateComponentPreRender(instance, next, optimized)
         } else {
+          // 如果组件自生数据变化则不会有next
           next = vnode
         }
 
@@ -1520,6 +1527,7 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
+        // 新的 subTree
         const nextTree = renderComponentRoot(instance)
         if (__DEV__) {
           endMeasure(instance, `render`)
@@ -1617,6 +1625,7 @@ function baseCreateRenderer(
     nextVNode.component = instance
     const prevProps = instance.vnode.props
     instance.vnode = nextVNode
+    // 清空next 为下一次更新做准备
     instance.next = null
     updateProps(instance, nextVNode.props, prevProps, optimized)
     updateSlots(instance, nextVNode.children, optimized)
