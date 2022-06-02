@@ -856,6 +856,7 @@ export function finishComponentSetup(
     }
 
     instance.render = (Component.render || NOOP) as InternalRenderFunction
+    
 
     // for runtime-compiled render functions using `with` blocks, the render
     // proxy used needs a different `has` handler which is more performant and

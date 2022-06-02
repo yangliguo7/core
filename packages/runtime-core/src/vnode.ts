@@ -273,6 +273,10 @@ export function setBlockTracking(value: number) {
 
 function setupBlock(vnode: VNode) {
   // save current block children on the block vnode
+  // 在createBaseVNode 中我们将每一个vnode push到currentBlock中
+  // 这里的dynamicChildren
+  // isBlockTreeEnabled 默认为1
+  // currentBlock => 当执行createBaseVNode 会将当前vnode放置到currentBlock中
   vnode.dynamicChildren =
     isBlockTreeEnabled > 0 ? currentBlock || (EMPTY_ARR as any) : null
   // close block
@@ -477,6 +481,7 @@ function createBaseVNode(
     // vnode should not be considered dynamic due to handler caching.
     vnode.patchFlag !== PatchFlags.HYDRATE_EVENTS
   ) {
+    // 这里currentBlock 会变成 dynamicChildren
     currentBlock.push(vnode)
   }
 
