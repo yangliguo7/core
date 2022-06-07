@@ -41,6 +41,9 @@ const builtInSymbols = new Set(
     .filter(isSymbol)
 )
 
+// createReactiveObject -> baseHandlers -> get ==> isReadonly = false, shallow = false
+// 因此通过createReactiveObject创建的数据、在判断IS_REACTIVE / IS_READONLY / IS_SHALLOW / RAW 都是根据这里的默认参数来确认的
+// IS_REACTIVE => true；IS_READONLY => false；IS_SHALLOW => false ；
 const get = /*#__PURE__*/ createGetter()
 const shallowGet = /*#__PURE__*/ createGetter(false, true)
 const readonlyGet = /*#__PURE__*/ createGetter(true)
@@ -49,6 +52,7 @@ const shallowReadonlyGet = /*#__PURE__*/ createGetter(true, true)
 const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
 
 function createArrayInstrumentations() {
+  debugger
   const instrumentations: Record<string, Function> = {}
   // instrument identity-sensitive Array methods to account for possible reactive
   // values
@@ -82,8 +86,9 @@ function createArrayInstrumentations() {
 }
 
 function createGetter(isReadonly = false, shallow = false) {
-  return function get(target: Target, key: string | symbol, receiver: object) {
-    if (key === ReactiveFlags.IS_REACTIVE) {
+  return function get(target: Target, key: string | symbol, receiver: object) { // get 函数接收三个参数。target 目标对象；key 被获取的属性名称；receiver Proxy或者继承proxy的对象
+    debugger
+    if (key === ReactiveFlags.IS_REACTIVE) { // 这里的判断返回值是根据闭包函数传入的参数来确定的。
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
@@ -104,10 +109,11 @@ function createGetter(isReadonly = false, shallow = false) {
       return target
     }
 
+    // 针对数组
     const targetIsArray = isArray(target)
 
     if (!isReadonly && targetIsArray && hasOwn(arrayInstrumentations, key)) {
-      return Reflect.get(arrayInstrumentations, key, receiver)
+      return Reflect.get(arrayInstrumentations, key, receiver) // receiver 为this
     }
 
     const res = Reflect.get(target, key, receiver)
@@ -134,6 +140,7 @@ function createGetter(isReadonly = false, shallow = false) {
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.
+      // 这里递归并不是在初始化的时候就全部递归成响应式而是在需要取值的时候才递归操作
       return isReadonly ? readonly(res) : reactive(res)
     }
 

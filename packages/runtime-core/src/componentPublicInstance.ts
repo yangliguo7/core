@@ -270,19 +270,23 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       return true
     }
 
-    // prioritize <script setup> bindings during dev.
+    // prioritize <script setup> bindings during dev. dev环境下优先考虑 setup
     // this allows even properties that start with _ or $ to be used - so that
     // it aligns with the production behavior where the render fn is inlined and
     // indeed has access to all declared variables.
     if (
       __DEV__ &&
-      setupState !== EMPTY_OBJ &&
+      setupState !== EMPTY_OBJ && // setupState setup函数的返回值 (packages/runtime-core/src/component.ts Line722 handleSetupResult函数)
       setupState.__isScriptSetup &&
       hasOwn(setupState, key)
     ) {
       return setupState[key]
     }
 
+
+    // 注意看这里的优先级属性
+    // 对于一个key
+    // SETUP -> DATA -> CONTEXT -> PROPS
     // data / props / ctx
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
@@ -326,6 +330,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
     }
 
+    // 处理$开头的key 或者 key不在SETUP、DATA、CONTEXT、PROPS中的(比方说 globalProperties)
+    // 1、先是否是publicGetter（$el、$data、$props.....）
+    // 2、cssModule (vue-loader)
+    // 3、user set custom properties
+    // 4、globalProperties
     const publicGetter = publicPropertiesMap[key]
     let cssModule, globalProperties
     // public $xxx properties
@@ -396,6 +405,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     key: string,
     value: any
   ): boolean {
+    // setupState -> data -> props -> globalProperties -> ctx.XXX
     const { data, setupState, ctx } = instance
     if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
       setupState[key] = value
@@ -409,7 +419,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           `Attempting to mutate prop "${key}". Props are readonly.`,
           instance
         )
-      return false
+      return false // false 表示 set 失败；直接修改props数据会是false
     }
     if (key[0] === '$' && key.slice(1) in instance) {
       __DEV__ &&
@@ -441,6 +451,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   ) {
     let normalizedProps
     return (
+      // accessCache -> data -> setupState -> props -> ctx -> publicPropertiesMap —> globalProperties
       !!accessCache![key] ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
@@ -476,6 +487,7 @@ if (__DEV__ && !__TEST__) {
   }
 }
 
+// 针对RuntimeCompiled 版本下的代理 （WITH 块）
 export const RuntimeCompiledPublicInstanceProxyHandlers = /*#__PURE__*/ extend(
   {},
   PublicInstanceProxyHandlers,

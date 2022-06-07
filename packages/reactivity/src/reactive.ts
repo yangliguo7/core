@@ -15,10 +15,10 @@ import { UnwrapRefSimple, Ref } from './ref'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
-  IS_REACTIVE = '__v_isReactive',
+  IS_REACTIVE = '__v_isReactive', // 一个数据是否已经有响应式对象
   IS_READONLY = '__v_isReadonly',
   IS_SHALLOW = '__v_isShallow',
-  RAW = '__v_raw'
+  RAW = '__v_raw' // 一个数据是否已经是响应式数据
 }
 
 export interface Target {
@@ -88,6 +88,7 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
  */
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
+  debugger
   // if trying to observe a readonly proxy, return the readonly version.
   if (isReadonly(target)) {
     return target
@@ -185,6 +186,7 @@ function createReactiveObject(
   collectionHandlers: ProxyHandler<any>,
   proxyMap: WeakMap<Target, any>
 ) {
+  debugger
   if (!isObject(target)) {
     if (__DEV__) {
       console.warn(`value cannot be made reactive: ${String(target)}`)
@@ -194,8 +196,8 @@ function createReactiveObject(
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
   if (
-    target[ReactiveFlags.RAW] &&
-    !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
+    target[ReactiveFlags.RAW] && // ReactiveFlags.RAW 用来表示一个数据是否已经是响应式数据
+    !(isReadonly && target[ReactiveFlags.IS_REACTIVE]) // ReactiveFlags.IS_REACTIVE 用来表示一个数据是否已经有响应式对象
   ) {
     return target
   }
@@ -211,7 +213,7 @@ function createReactiveObject(
   }
   const proxy = new Proxy(
     target,
-    targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
+    targetType === TargetType.COLLECTION ? collectionHandlers /*Map set weakSet weakMap*/ : baseHandlers /*object array*/
   )
   proxyMap.set(target, proxy)
   return proxy

@@ -1228,7 +1228,7 @@ function baseCreateRenderer(
     // mounting
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
-    // 创建组件instance
+    // 1、创建组件instance
     // instance和vnode一样的行为，但是这只应用于Component类型的组件
     // 所以和vnode分开，作为一个vnode的拓展，当然vnode.component字段就包含对应的instance（见 initialVNode.component = createComponentInstance）
     // vnode.component == instance == createComponentInstance(fn)
@@ -1259,7 +1259,7 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
-      // 设置组件实例
+      // 2、设置组件实例
       // 将模板转化为render函数(instance.render) 根据render 函数进行 下一步操作
       setupComponent(instance)
       if (__DEV__) {
@@ -1281,7 +1281,7 @@ function baseCreateRenderer(
       return
     }
 
-    // 设置并运行带副作用的渲染函数
+    // 3、设置并运行带副作用的渲染函数
     setupRenderEffect(
       instance,
       initialVNode,
@@ -1688,7 +1688,6 @@ function baseCreateRenderer(
         // 2、多出的节点 remove
         // 3、新增的节点 直接mount
         // unkeyed
-        debugger
         patchUnkeyedChildren(
           c1 as VNode[],
           c2 as VNodeArrayChildren,
@@ -1835,7 +1834,6 @@ function baseCreateRenderer(
     let e1 = c1.length - 1 // prev ending index
     // 新节点下标长度
     let e2 = l2 - 1 // next ending index
-debugger
     // 1. sync from start
     // (a b) c
     // (a b) d e

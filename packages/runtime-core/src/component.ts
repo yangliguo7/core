@@ -477,8 +477,8 @@ export function createComponentInstance(
     exposeProxy: null,
     withProxy: null,
     provides: parent ? parent.provides : Object.create(appContext.provides), // 这里是 provide 和 inject；provide 会一层一层向下
-    accessCache: null!,
-    renderCache: [],
+    accessCache: null!, // 渲染代理的属性访问缓存；这里是为了知道属性是props 还是 data 还是 setupState等等。减少hasOwn的次数
+    renderCache: [], // 渲染缓存
 
     // local resovled assets
     components: null,
@@ -539,12 +539,14 @@ export function createComponentInstance(
     sp: null
   }
   console.log('创建instance实例', instance)
+  // 初始化上下文
   if (__DEV__) {
     // instance.ctx 挂载了 this上的相关属性用于调试
     instance.ctx = createDevRenderContext(instance)
   } else {
     instance.ctx = { _: instance }
   }
+  // 初始化根组件指针
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance) // 这里绑定了instance;所以你emit不传参数也会有参数
 
@@ -654,8 +656,10 @@ function setupStatefulComponent(
   instance.accessCache = Object.create(null)
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
-  // fixme 为什么这里需要配置代理
+  // Q：为什么这里需要配置代理
+  // A：这里配置代理是因为，通过对instance.ctx上数据的修改来对setupState、ctx、data、props修改
   // instance.ctx 为 createComponentInstance 中 赋值。
+  // 创建上下文代理
   // 在dev下 是this上的一些属性：publicPropertiesMap ( packages/runtime-core/src/componentPublicInstance.ts 226 Line ); 生产环境下为 { _:instance }
   instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))
   if (__DEV__) {
@@ -739,6 +743,7 @@ export function handleSetupResult(
       instance.render = setupResult as InternalRenderFunction
     }
   } else if (isObject(setupResult)) {
+    debugger
     if (__DEV__ && isVNode(setupResult)) {
       warn(
         `setup() should not return VNodes directly - ` +
@@ -750,7 +755,8 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
-    // 将setup上返回的数据包装一个proxy 赋值给 setupState
+    // 如果函数返回的数据是一个reactive对象则直接返回reactive对象
+    // 如果返回的是一个普通对象则返回proxy
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       // 校验导出的数据，不应该以 $ _ 开头
@@ -848,6 +854,7 @@ export function finishComponentSetup(
           }
         }
         // render函数 是通过compiler来得
+        // 注意这是针对runtime+compile版本而来，针对runtime-only版本而言。vue-loader会去解析.vue文件生成render函数
         Component.render = compile(template, finalCompilerOptions)
         if (__DEV__) {
           endMeasure(instance, `compile`)
@@ -856,7 +863,7 @@ export function finishComponentSetup(
     }
 
     instance.render = (Component.render || NOOP) as InternalRenderFunction
-    
+
 
     // for runtime-compiled render functions using `with` blocks, the render
     // proxy used needs a different `has` handler which is more performant and
@@ -871,6 +878,7 @@ export function finishComponentSetup(
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     setCurrentInstance(instance)
     pauseTracking()
+    // 兼容vue2
     applyOptions(instance)
     resetTracking()
     unsetCurrentInstance()
