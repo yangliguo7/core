@@ -1660,6 +1660,13 @@ function baseCreateRenderer(
     // fast path
     if (patchFlag > 0) {
       // 子节点有key
+      // 有key的情况下
+      // 1、从头
+      // 2、从尾部
+      // 3、判断新增
+      // 4、判断删除
+      // 5、根据新老节点的key进行patch
+      // 6、移动、删除、新增节点 (移动涉及到获得最长的递增子序列。减少移动次数)
       if (patchFlag & PatchFlags.KEYED_FRAGMENT) {
         // this could be either fully-keyed or mixed (some keyed some not)
         // presence of patchFlag means children are guaranteed to be arrays
@@ -1676,7 +1683,12 @@ function baseCreateRenderer(
         )
         return
       } else if (patchFlag & PatchFlags.UNKEYED_FRAGMENT) { // 子节点无key
+        // 在无key的情况下会做顺序patch
+        // 1、先比较新旧子节点长度、在最小值范围内进行顺序patch；相当于key就是index
+        // 2、多出的节点 remove
+        // 3、新增的节点 直接mount
         // unkeyed
+        debugger
         patchUnkeyedChildren(
           c1 as VNode[],
           c2 as VNodeArrayChildren,
@@ -1923,7 +1935,7 @@ debugger
       }
     }
 
-    // 5. unknown sequence
+    // 5. unknown sequence 涉及到寻找最长的自增子序列问题
     // [i ... e1 + 1]: a b [c d e] f g
     // [i ... e2 + 1]: a b [e d c h] f g
     // i = 2, e1 = 4, e2 = 5
@@ -2022,7 +2034,7 @@ debugger
 
       // 5.3 move and mount
       // generate longest stable subsequence only when nodes have moved
-      // 寻找最长的递增子序列；可以减少移动次数
+      // 寻找最长的递增子序列(数据对应的是下标)；可以减少移动次数
       const increasingNewIndexSequence = moved
         ? getSequence(newIndexToOldIndexMap)
         : EMPTY_ARR
@@ -2052,7 +2064,7 @@ debugger
           // OR current node is not among the stable sequence
           // 如果当前没有最长的递增子序列（例如reverse）；或者i不在最长的递增子序列
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
-            move(nextChild, container, anchor, MoveType.REORDER)
+            move(nextChild, container, anchor, MoveType.REORDER) // 这里就是为了减少move次数
           } else {
             j--
           }
@@ -2479,8 +2491,38 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
   }
 }
 
+// var lengthOfLIS = function (nums) { // 通过二分法回去最长递增子序列的长度；这个复杂度是NlogN
+//   if (!nums.length) {
+//     return 0;
+//   }
+//   let maxL = 0;
+//   let result = [nums[0]];
+//   for (let i = 1; i < nums.length; i++) {
+//     if (nums[i] > result[maxL]) {
+//       result.push(nums[i]);
+//       maxL++;
+//     } else if (nums[i] < result[maxL]) { // 二分法 logN
+//       // 二分覆盖第一个比他大的值
+//       let left = 0;
+//       let right = result.length - 1;
+//       while (left <= right) {
+//         let middle  =left + Math.ceil(((right - left) >> 1));
+//         if (result[middle] > nums[i]) {
+//           right = middle - 1;
+//         } else if (result[middle] < nums[i]) {
+//           left = middle + 1;
+//         }else{
+//           break
+//         }
+//       }
+//       result[(left < result.length) ? left : -1] = nums[i]
+//     }
+//   }
+//
+//   return result.length;
+// }
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence
-function getSequence(arr: number[]): number[] {
+function getSequence(arr: number[]): number[] { // 这里的复杂度是
   const p = arr.slice()
   const result = [0]
   let i, j, u, v, c
