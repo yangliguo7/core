@@ -36,13 +36,15 @@ export type SchedulerJobs = SchedulerJob | SchedulerJob[]
 let isFlushing = false
 let isFlushPending = false
 
-const queue: SchedulerJob[] = []
+const queue: SchedulerJob[] = [] // 异步任务队列
 let flushIndex = 0
 
+// pre
 const pendingPreFlushCbs: SchedulerJob[] = []
 let activePreFlushCbs: SchedulerJob[] | null = null
 let preFlushIndex = 0
 
+// post
 const pendingPostFlushCbs: SchedulerJob[] = []
 let activePostFlushCbs: SchedulerJob[] | null = null
 let postFlushIndex = 0

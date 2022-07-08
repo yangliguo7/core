@@ -761,6 +761,7 @@ export function queueEffectWithSuspense(
   fn: Function | Function[],
   suspense: SuspenseBoundary | null
 ): void {
+  // suspense 相关； https://staging-cn.vuejs.org/guide/built-ins/suspense.html
   if (suspense && suspense.pendingBranch) {
     if (isArray(fn)) {
       suspense.effects.push(...fn)
@@ -768,6 +769,7 @@ export function queueEffectWithSuspense(
       suspense.effects.push(fn)
     }
   } else {
+    debugger
     queuePostFlushCb(fn)
   }
 }

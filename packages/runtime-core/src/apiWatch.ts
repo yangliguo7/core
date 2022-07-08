@@ -204,12 +204,13 @@ function doWatch(
   let forceTrigger = false
   let isMultiSource = false
 
+  // 标准化source
   if (isRef(source)) {
     getter = () => source.value
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
     getter = () => source
-    deep = true
+    deep = true // 传入对象则默认设置为true
   } else if (isArray(source)) {
     isMultiSource = true
     forceTrigger = source.some(isReactive)
@@ -267,13 +268,16 @@ function doWatch(
     }
   }
 
-  if (cb && deep) {
+  if (cb && deep) { // 如果是deep 则会递归触发getter；避免执行traverse；对象层级过深会导致一定的性能损耗
     const baseGetter = getter
     getter = () => traverse(baseGetter())
   }
 
   let cleanup: () => void
-  let onCleanup: OnCleanup = (fn: () => void) => {
+  // 注册无效的回调函数
+  // 意义在于；当watch监听的数据频繁变化时，每次watch都会执行；而此时却不知道这是之前的还是现在的
+  // 因此每一个watch回调函数之前都会执行这个回调
+  let onCleanup: OnCleanup = (fn: () => void) => { // callback 第三个参数
     cleanup = effect.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
@@ -304,7 +308,7 @@ function doWatch(
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
-      if (
+      if ( // 配置了deep / source 为 数组时有 reactive对象 / 新旧数据发生改变 则会触发回调
         deep ||
         forceTrigger ||
         (isMultiSource
@@ -316,21 +320,21 @@ function doWatch(
           isArray(newValue) &&
           isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
       ) {
-        // cleanup before running cb again
+        // cleanup before running cb again；第一次执行还没走回调；所以一定是false
         if (cleanup) {
           cleanup()
         }
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
+          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue, // 第一执行 旧数据为 undefined
           onCleanup
         ])
-        oldValue = newValue
+        oldValue = newValue // 跟新oldValue 为 下一次作准备
       }
     } else {
       // watchEffect
-      effect.run()
+      effect.run() // 如果watch(()=>{}) 则执行的时effect.run 此时会回调getter 函数
     }
   }
 
@@ -338,17 +342,18 @@ function doWatch(
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
-  let scheduler: EffectScheduler
-  if (flush === 'sync') {
+  let scheduler: EffectScheduler // 这里的scheduler触发时机是当 effect触发run时。触发getter。触发set集合里的deps(activeEffect)；从而通过scheduler回调
+  if (flush === 'sync') { // 同步执行watch；数据变化会同步执行回调函数
     scheduler = job as any // the scheduler function gets called directly
-  } else if (flush === 'post') {
+  } else if (flush === 'post') { // 组件跟新之后执行
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
+    // 回调函数通过队列的方式；在组件跟新之前执行，如果组件还没挂载则同步执行。确保回调函数在组件挂载之前执行
+    // 多次执行watch；在一个Tick内只会执行一次
     // default: 'pre'
     scheduler = () => queuePreFlushCb(job)
   }
-
-  const effect = new ReactiveEffect(getter, scheduler)
+  const effect = new ReactiveEffect(getter, scheduler) // 第二个参数就是scheduler
 
   if (__DEV__) {
     effect.onTrack = onTrack
@@ -358,9 +363,9 @@ function doWatch(
   // initial run
   if (cb) {
     if (immediate) {
-      job()
+      job() // 立即执行 此时oldValue 为undefined；注意这里的执行时机；在你使用watch的时候就已经去执行了
     } else {
-      oldValue = effect.run()
+      oldValue = effect.run() // 拿取的旧数据
     }
   } else if (flush === 'post') {
     queuePostRenderEffect(
@@ -371,7 +376,7 @@ function doWatch(
     effect.run()
   }
 
-  return () => {
+  return () => { // watch 返回的是一个函数；执行即可关闭watch监听
     effect.stop()
     if (instance && instance.scope) {
       remove(instance.scope.effects!, effect)
@@ -421,6 +426,7 @@ export function createPathGetter(ctx: any, path: string) {
   }
 }
 
+// 递归；这里会持续触发get从而收集依赖
 export function traverse(value: unknown, seen?: Set<unknown>) {
   if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value

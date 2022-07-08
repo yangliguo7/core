@@ -306,7 +306,7 @@ export function createAppAPI<HostElement>(
             rootComponent as ConcreteComponent, // createApp中传入的第一个参数
             rootProps // createApp中传入的第二个参数
           )
-          
+
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
@@ -326,7 +326,7 @@ export function createAppAPI<HostElement>(
             // rootContainer 为真实dom
             render(vnode, rootContainer, isSVG)
           }
-          
+
           isMounted = true
           app._container = rootContainer
           // for devtools and telemetry
