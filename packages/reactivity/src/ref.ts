@@ -45,6 +45,8 @@ export function trackRefValue(ref: RefBase<any>) {
 
 export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   ref = toRaw(ref)
+  // 这里是执行trigger的关键;
+  // ref.dep 里面存放的是当前ref 相关的 activeEffect；在track阶段捕获到ref上
   if (ref.dep) {
     if (__DEV__) {
       triggerEffects(ref.dep, {
@@ -112,7 +114,7 @@ class RefImpl<T> {
 
   set value(newVal) {
     newVal = this.__v_isShallow ? newVal : toRaw(newVal)
-    if (hasChanged(newVal, this._rawValue)) {
+    if (hasChanged(newVal, this._rawValue))  {
       this._rawValue = newVal
       this._value = this.__v_isShallow ? newVal : toReactive(newVal)
       triggerRefValue(this, newVal)
