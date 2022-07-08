@@ -43,11 +43,12 @@ export class ComputedRefImpl<T> {
   ) {
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._dirty) {
+        // 这里的_dirty 为了当执行多次Computed.value时不会重新计算。当computed传入的getter发生改变时，effect的scheduler会执行，把_dirty置为false
         this._dirty = true
         triggerRefValue(this)
       }
     })
-    this.effect.computed = this
+    this.effect.computed = this // computed 属性用于 在trigger阶段优先级排序
     this.effect.active = this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
@@ -55,10 +56,11 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
-    trackRefValue(self)
+    trackRefValue(self) // 这里手动收集依赖的目的是为了嵌套effect可以得到执行
     if (self._dirty || !self._cacheable) {
+      // SSR则不会有缓存机制
       self._dirty = false
-      self._value = self.effect.run()!
+      self._value = self.effect.run()! // 执行effect函数
     }
     return self._value
   }
@@ -84,6 +86,7 @@ export function computed<T>(
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>
 
+  // computed 内部可以传入function和对象；如果是对象则需要定义get / set
   const onlyGetter = isFunction(getterOrOptions)
   if (onlyGetter) {
     getter = getterOrOptions

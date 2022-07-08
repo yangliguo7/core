@@ -108,7 +108,7 @@ export function effectScope(detached?: boolean) {
 
 export function recordEffectScope(
   effect: ReactiveEffect,
-  scope: EffectScope | undefined = activeEffectScope
+  scope: EffectScope | undefined = activeEffectScope // 默认数据
 ) {
   if (scope && scope.active) {
     scope.effects.push(effect)

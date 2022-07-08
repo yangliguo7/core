@@ -52,10 +52,10 @@ const shallowReadonlyGet = /*#__PURE__*/ createGetter(true, true)
 const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
 
 function createArrayInstrumentations() {
-  debugger
   const instrumentations: Record<string, Function> = {}
   // instrument identity-sensitive Array methods to account for possible reactive
   // values
+  // track 函数 需要当前有activeEffect才会有用
   ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       const arr = toRaw(this) as any
@@ -87,7 +87,7 @@ function createArrayInstrumentations() {
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: Target, key: string | symbol, receiver: object) { // get 函数接收三个参数。target 目标对象；key 被获取的属性名称；receiver Proxy或者继承proxy的对象
-    debugger
+    // 针对特殊的Key处理
     if (key === ReactiveFlags.IS_REACTIVE) { // 这里的判断返回值是根据闭包函数传入的参数来确定的。
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
@@ -108,7 +108,6 @@ function createGetter(isReadonly = false, shallow = false) {
     ) {
       return target
     }
-
     // 针对数组
     const targetIsArray = isArray(target)
 
@@ -118,11 +117,14 @@ function createGetter(isReadonly = false, shallow = false) {
 
     const res = Reflect.get(target, key, receiver)
 
+    // 根据xx.xx 来确定是否递归响应式数据
+
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
       return res
     }
 
     if (!isReadonly) {
+      // 收集依赖
       track(target, TrackOpTypes.GET, key)
     }
 
@@ -140,7 +142,8 @@ function createGetter(isReadonly = false, shallow = false) {
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.
-      // 这里递归并不是在初始化的时候就全部递归成响应式而是在需要取值的时候才递归操作
+      // 这里递归并不是在初始化的时候就全部递归成响应式而是在需要取值的时候才递归操作；延迟递归
+      // 这里和Object.defineProperty不一样；前置是在定义阶段进行递归；而proxy是在访问数值后在进行递归
       return isReadonly ? readonly(res) : reactive(res)
     }
 
@@ -174,17 +177,16 @@ function createSetter(shallow = false) {
     } else {
       // in shallow mode, objects are set as-is regardless of reactive or not
     }
-
     const hadKey =
       isArray(target) && isIntegerKey(key)
         ? Number(key) < target.length
         : hasOwn(target, key)
     const result = Reflect.set(target, key, value, receiver)
     // don't trigger if target is something up in the prototype chain of original
-    if (target === toRaw(receiver)) {
-      if (!hadKey) {
+    if (target === toRaw(receiver)) { // 修改原型链上数据不会触发响应式
+      if (!hadKey) { // 新增
         trigger(target, TriggerOpTypes.ADD, key, value)
-      } else if (hasChanged(value, oldValue)) {
+      } else if (hasChanged(value, oldValue)) { // 修改
         trigger(target, TriggerOpTypes.SET, key, value, oldValue)
       }
     }

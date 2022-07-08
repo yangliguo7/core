@@ -84,6 +84,7 @@ export class ReactiveEffect<T = any> {
   }
 
   run() {
+    // 如果this.active为false则执行原始fn函数；执行stop函数则会让 this.active 为false
     if (!this.active) {
       return this.fn()
     }
@@ -96,8 +97,10 @@ export class ReactiveEffect<T = any> {
       parent = parent.parent
     }
     try {
+      // 这里先把activeEffect 赋值给this.parent ；在final中又把 this.parent赋值给activeEffect是为了解决嵌套effect的问题
+      // 相当于之前的 stack 入栈 出栈操作
       this.parent = activeEffect
-      activeEffect = this
+      activeEffect = this // 赋值 activeEffect
       shouldTrack = true
 
       trackOpBit = 1 << ++effectTrackDepth
@@ -130,7 +133,7 @@ export class ReactiveEffect<T = any> {
     if (activeEffect === this) {
       this.deferStop = true
     } else if (this.active) {
-      cleanupEffect(this)
+      cleanupEffect(this) // 清理与之关联的依赖
       if (this.onStop) {
         this.onStop()
       }
@@ -139,6 +142,7 @@ export class ReactiveEffect<T = any> {
   }
 }
 
+// cleanup 清理依赖
 function cleanupEffect(effect: ReactiveEffect) {
   const { deps } = effect
   if (deps.length) {
@@ -167,6 +171,7 @@ export interface ReactiveEffectRunner<T = any> {
   effect: ReactiveEffect
 }
 
+// effect 函数基于 ReactiveEffect
 export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
@@ -180,7 +185,7 @@ export function effect<T = any>(
     extend(_effect, options)
     if (options.scope) recordEffectScope(_effect, options.scope)
   }
-  if (!options || !options.lazy) {
+  if (!options || !options.lazy) { // lazy 延迟执行；
     _effect.run()
   }
   const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
@@ -210,6 +215,11 @@ export function resetTracking() {
   shouldTrack = last === undefined ? true : last
 }
 
+// 对响应式数据进行get操作会执行track
+// targetMap 是以 obj 为key ；map 作为value
+// key             ->         value
+// target          ->         map
+//                            key         Set => activeEffect[]
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (shouldTrack && activeEffect) {
     let depsMap = targetMap.get(target)
@@ -234,7 +244,7 @@ export function trackEffects(
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   let shouldTrack = false
-  if (effectTrackDepth <= maxMarkerBits) {
+  if (effectTrackDepth <= maxMarkerBits) { // 最大执行深度
     if (!newTracked(dep)) {
       dep.n |= trackOpBit // set newly tracked
       shouldTrack = !wasTracked(dep)
@@ -246,6 +256,8 @@ export function trackEffects(
 
   if (shouldTrack) {
     dep.add(activeEffect!)
+    // 这里将dep 放到 activeEffect!.deps 目的是为了做cleanup；每次执行trigger时需要清理依赖在执行一次；清除不需要的副作用函数。
+    // 在执行effectFn 时 重新计算 deps
     activeEffect!.deps.push(dep)
     if (__DEV__ && activeEffect!.onTrack) {
       activeEffect!.onTrack({
@@ -256,6 +268,7 @@ export function trackEffects(
   }
 }
 
+// 循环执行 相关的 effect 函数
 export function trigger(
   target: object,
   type: TriggerOpTypes,
@@ -349,7 +362,7 @@ export function triggerEffects(
 ) {
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
-  for (const effect of effects) {
+  for (const effect of effects) { // 先触发 computed 的
     if (effect.computed) {
       triggerEffect(effect, debuggerEventExtraInfo)
     }
@@ -365,11 +378,13 @@ function triggerEffect(
   effect: ReactiveEffect,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
+  // effect !== activeEffect  是为了 解决在effect函数自身触发自己的更新；
+  // 比如 effect(()=>a.value++) 同时触发了 get 和 set
   if (effect !== activeEffect || effect.allowRecurse) {
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
-    if (effect.scheduler) {
+    if (effect.scheduler) { // 调度器；让effect可以通过外部控制执行；
       effect.scheduler()
     } else {
       effect.run()
