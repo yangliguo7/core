@@ -40,6 +40,7 @@ const enum TargetType {
   COLLECTION = 2
 }
 
+// Object、Array => TargetType.COMMON 1；Map、Set、WeakMap、WeakSet TargetType.COLLECTION 2
 function targetTypeMap(rawType: string) {
   switch (rawType) {
     case 'Object':
@@ -88,7 +89,6 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
  */
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
-  debugger
   // if trying to observe a readonly proxy, return the readonly version.
   if (isReadonly(target)) {
     return target
@@ -186,7 +186,6 @@ function createReactiveObject(
   collectionHandlers: ProxyHandler<any>,
   proxyMap: WeakMap<Target, any>
 ) {
-  debugger
   if (!isObject(target)) {
     if (__DEV__) {
       console.warn(`value cannot be made reactive: ${String(target)}`)
@@ -195,6 +194,8 @@ function createReactiveObject(
   }
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
+
+  // 这里会触发getter
   if (
     target[ReactiveFlags.RAW] && // ReactiveFlags.RAW 用来表示一个数据是否已经是响应式数据
     !(isReadonly && target[ReactiveFlags.IS_REACTIVE]) // ReactiveFlags.IS_REACTIVE 用来表示一个数据是否已经有响应式对象
@@ -207,6 +208,7 @@ function createReactiveObject(
     return existingProxy
   }
   // only a whitelist of value types can be observed.
+  // 获取传入数据的类型；在后面根据类型选择不同的handler
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target
@@ -215,6 +217,7 @@ function createReactiveObject(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers /*Map set weakSet weakMap*/ : baseHandlers /*object array*/
   )
+  // 存储target对应的proxy
   proxyMap.set(target, proxy)
   return proxy
 }
