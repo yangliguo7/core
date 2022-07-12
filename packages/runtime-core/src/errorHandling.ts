@@ -80,6 +80,7 @@ export function callWithAsyncErrorHandling(
   type: ErrorTypes,
   args?: unknown[]
 ): any[] {
+
   if (isFunction(fn)) {
     const res = callWithErrorHandling(fn, instance, type, args)
     if (res && isPromise(res)) {

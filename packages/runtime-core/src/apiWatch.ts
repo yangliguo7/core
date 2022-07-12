@@ -232,7 +232,7 @@ function doWatch(
       getter = () =>
         callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
     } else {
-      // no cb -> simple effect
+      // no cb -> simple effect； watchEffect
       getter = () => {
         if (instance && instance.isUnmounted) {
           return
@@ -301,7 +301,7 @@ function doWatch(
   }
 
   let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE
-  const job: SchedulerJob = () => {
+  const job: SchedulerJob = () => { // watch 执行的其实是这个job；在这个job中会执行callWithAsyncErrorHandling 触发 cb
     if (!effect.active) {
       return
     }
@@ -334,7 +334,7 @@ function doWatch(
       }
     } else {
       // watchEffect
-      effect.run() // 如果watch(()=>{}) 则执行的时effect.run 此时会回调getter 函数
+      effect.run() // 如果watch(()=>{}) 则执行的时effect.run 此时会回调getter函数，执行 cb
     }
   }
 
@@ -365,7 +365,7 @@ function doWatch(
     if (immediate) {
       job() // 立即执行 此时oldValue 为undefined；注意这里的执行时机；在你使用watch的时候就已经去执行了
     } else {
-      oldValue = effect.run() // 拿取的旧数据
+      oldValue = effect.run() // 拿取的旧数据；拿取旧数据 涉及到effect.Run 此时会执行getter；getter、activeEffect关联。
     }
   } else if (flush === 'post') {
     queuePostRenderEffect(
@@ -373,7 +373,7 @@ function doWatch(
       instance && instance.suspense
     )
   } else {
-    effect.run()
+    effect.run() // 默认 watchEffect 会执行到这。然后执行getter 触发
   }
 
   return () => { // watch 返回的是一个函数；执行即可关闭watch监听

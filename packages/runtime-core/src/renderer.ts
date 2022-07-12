@@ -1349,12 +1349,17 @@ function baseCreateRenderer(
       if (!instance.isMounted) { // 默认是false
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
+        // 这里的bm、m是当setup里引入了onBeforeMount、mount时。函数在setupComponent时，执行了setup函数
+        // 从而执行了引入的生命周期
+        // 这个生命周期是通过registerLifecycleHook -> createHook 导出的。
+        // 在执行registerLifecycleHook是，会向instance上绑定LifecycleHooks（packages/runtime-core/src/component.ts）
+        // 这里也可以看出 是限制性setup函数 然后在执行bm、m。因此setup是在这几个生命周期之前。这个时候并没有真实的dom
         const { bm, m, parent } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
         toggleRecurse(instance, false)
         // beforeMount hook
-        if (bm) { // fixme instance 默认是null ; 那这个什么时候赋值的呢?
+        if (bm) {
           invokeArrayFns(bm)
         }
         // onVnodeBeforeMount

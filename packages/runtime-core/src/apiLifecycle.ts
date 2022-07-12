@@ -20,6 +20,7 @@ export function injectHook(
   target: ComponentInternalInstance | null = currentInstance,
   prepend: boolean = false
 ): Function | undefined {
+  
   if (target) {
     const hooks = target[type] || (target[type] = [])
     // cache the error handling wrapper for injected hooks so the same hook
