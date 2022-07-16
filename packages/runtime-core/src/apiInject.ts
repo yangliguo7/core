@@ -6,12 +6,12 @@ import { warn } from './warning'
 export interface InjectionKey<T> extends Symbol {}
 
 export function provide<T>(key: InjectionKey<T> | string | number, value: T) {
-  if (!currentInstance) {
+  if (!currentInstance) { // setupStatefulComponent => setCurrentInstance
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)
     }
   } else {
-    let provides = currentInstance.provides
+    let provides = currentInstance.provides // provides 是父类得provide
     // by default an instance inherits its parent's provides object
     // but when it needs to provide values of its own, it creates its
     // own provides object using parent provides object as prototype.
@@ -19,11 +19,11 @@ export function provide<T>(key: InjectionKey<T> | string | number, value: T) {
     // parent and let the prototype chain do the work.
     const parentProvides =
       currentInstance.parent && currentInstance.parent.provides
-    if (parentProvides === provides) {
+    if (parentProvides === provides) { // 这里是为了区分 哪些是父类provide 那些是当前instance provide来得。因此把父类来得 绑定到原型上
       provides = currentInstance.provides = Object.create(parentProvides)
     }
     // TS doesn't allow symbol as index type
-    provides[key as string] = value
+    provides[key as string] = value // 叠加provide
   }
 }
 
