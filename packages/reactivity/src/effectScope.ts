@@ -75,15 +75,16 @@ export class EffectScope {
   }
 
   stop(fromParent?: boolean) {
-    if (this.active) {
+    debugger
+    if (this.active) { // fixme this.effects 什么时候push的
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].stop()
+        this.effects[i].stop()  // 删除deps
       }
       for (i = 0, l = this.cleanups.length; i < l; i++) {
         this.cleanups[i]()
       }
-      if (this.scopes) {
+      if (this.scopes) { // fixme this.scopes 是什么
         for (i = 0, l = this.scopes.length; i < l; i++) {
           this.scopes[i].stop(true)
         }

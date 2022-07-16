@@ -1426,7 +1426,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             startMeasure(instance, `patch`)
           }
-          patch(
+          patch( // 同步
             null,
             subTree,
             container,
@@ -1440,7 +1440,8 @@ function baseCreateRenderer(
           }
           initialVNode.el = subTree.el
         }
-        // mounted hook
+        // mounted hook；这里和bm 是有区别得；
+        // bm 是直接回调；而m是放在post队列中等组件更新完毕在触发
         if (m) {
           queuePostRenderEffect(m, parentSuspense)
         }
@@ -1611,6 +1612,7 @@ function baseCreateRenderer(
     // #1801, #2043 component render effects should allow recursive updates
     toggleRecurse(instance, true)
 
+    // dev 环境才会触发 onRenderTrack、onRenderTrigger
     if (__DEV__) {
       effect.onTrack = instance.rtc
         ? e => invokeArrayFns(instance.rtc!, e)
@@ -2143,6 +2145,7 @@ function baseCreateRenderer(
     }
   }
 
+  // unmount执行在组件diff 跟新中 新旧vnode节点不一致
   const unmount: UnmountFn = (
     vnode,
     parentComponent,
@@ -2316,6 +2319,7 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
+    // bum um 生命周期钩子
     const { bum, scope, update, subTree, um } = instance
 
     // beforeUnmount hook
@@ -2331,6 +2335,7 @@ function baseCreateRenderer(
     }
 
     // stop effects in component scope
+    // 去除依赖
     scope.stop()
 
     // update may be null if a component is unmounted before its async
@@ -2418,6 +2423,8 @@ function baseCreateRenderer(
       // 这里的parentComponent 是 null
       patch(container._vnode || null, vnode, container, null, null, null, isSVG)
     }
+    // 执行postQueue队列中的函数 (eg : onMount hooks)
+    // 因此mount是在patch后执行的。
     flushPostFlushCbs()
     container._vnode = vnode
   }

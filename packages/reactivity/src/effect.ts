@@ -259,7 +259,7 @@ export function trackEffects(
     // 这里将dep 放到 activeEffect!.deps 目的是为了做cleanup；每次执行trigger时需要清理依赖在执行一次；清除不需要的副作用函数。
     // 在执行effectFn 时 重新计算 deps
     activeEffect!.deps.push(dep)
-    if (__DEV__ && activeEffect!.onTrack) {
+    if (__DEV__ && activeEffect!.onTrack) { // dev执行 onTrack函数
       activeEffect!.onTrack({
         effect: activeEffect!,
         ...debuggerEventExtraInfo!
@@ -381,7 +381,7 @@ function triggerEffect(
   // effect !== activeEffect  是为了 解决在effect函数自身触发自己的更新；
   // 比如 effect(()=>a.value++) 同时触发了 get 和 set
   if (effect !== activeEffect || effect.allowRecurse) {
-    if (__DEV__ && effect.onTrigger) {
+    if (__DEV__ && effect.onTrigger) { // dev执行 onTrigger 函数
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
     if (effect.scheduler) { // 调度器；让effect可以通过外部控制执行；

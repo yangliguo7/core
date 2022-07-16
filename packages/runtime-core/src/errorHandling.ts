@@ -98,6 +98,7 @@ export function callWithAsyncErrorHandling(
   return values
 }
 
+// 异常函数
 export function handleError(
   err: unknown,
   instance: ComponentInternalInstance | null,
@@ -112,10 +113,11 @@ export function handleError(
     // in production the hook receives only the error code
     const errorInfo = __DEV__ ? ErrorTypeStrings[type] : type
     while (cur) {
-      const errorCapturedHooks = cur.ec
+      const errorCapturedHooks = cur.ec // 这里是instance 上注册的errorCapture hooks；（新增的hook）
       if (errorCapturedHooks) {
         for (let i = 0; i < errorCapturedHooks.length; i++) {
           if (
+            // 这里false是约束不会做递归的调用，即 如果 errorCapture hooks 返回的是false，则不在向下传递
             errorCapturedHooks[i](err, exposedInstance, errorInfo) === false
           ) {
             return
