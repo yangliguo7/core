@@ -74,14 +74,14 @@ const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
 export const transformElement: NodeTransform = (node, context) => {
   // perform the work on exit, after all child expressions have been
   // processed and merged.
-  return function postTransformElement() {
+  return function postTransformElement() { // 创建一个实现VnodeCall接口的代码生成节点，后续根据这个节点生成目标节点代码
     node = context.currentNode!
 
     if (
       !(
         node.type === NodeTypes.ELEMENT &&
         (node.tagType === ElementTypes.ELEMENT ||
-          node.tagType === ElementTypes.COMPONENT)
+          node.tagType === ElementTypes.COMPONENT) // <component / <Component
       )
     ) {
       return
@@ -101,12 +101,14 @@ export const transformElement: NodeTransform = (node, context) => {
 
     let vnodeProps: VNodeCall['props']
     let vnodeChildren: VNodeCall['children']
-    let vnodePatchFlag: VNodeCall['patchFlag']
+    let vnodePatchFlag: VNodeCall['patchFlag'] // 标记待更新的类型标识，用于patch优化
     let patchFlag: number = 0
     let vnodeDynamicProps: VNodeCall['dynamicProps']
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
 
+    // BLOCK 节点(动态节点、TELEPORT、SUSPENSE、svg、foreignObject);
+    // Block Tree 是将 节点基于指令动态切割的块。
     let shouldUseBlock =
       // dynamic component may resolve to plain elements
       isDynamicComponent ||
@@ -117,9 +119,10 @@ export const transformElement: NodeTransform = (node, context) => {
         // updates inside get proper isSVG flag at runtime. (#639, #643)
         // This is technically web-specific, but splitting the logic out of core
         // leads to too much unnecessary complexity.
-        (tag === 'svg' || tag === 'foreignObject'))
+        (tag === 'svg' || tag === 'foreignObject')) // https://developer.mozilla.org/zh-CN/docs/Web/SVG/Element/foreignObject
 
     // props
+    debugger
     if (props.length > 0) {
       const propsBuildResult = buildProps(node, context)
       vnodeProps = propsBuildResult.props
@@ -188,7 +191,7 @@ export const transformElement: NodeTransform = (node, context) => {
           patchFlag |= PatchFlags.TEXT
         }
         // pass directly if the only child is a text node
-        // (plain / interpolation / expression)
+        // (plain / interpolation / expression) // 文本节点 只有一个子元素
         if (hasDynamicTextChild || type === NodeTypes.TEXT) {
           vnodeChildren = child as TemplateTextChildNode
         } else {
@@ -204,7 +207,7 @@ export const transformElement: NodeTransform = (node, context) => {
       if (__DEV__) {
         if (patchFlag < 0) {
           // special flags (negative and mutually exclusive)
-          vnodePatchFlag = patchFlag + ` /* ${PatchFlagNames[patchFlag]} */`
+          vnodePatchFlag = patchFlag + ` /* ${PatchFlagNames[patchFlag]} */` // 生成注释
         } else {
           // bitwise flags
           const flagNames = Object.keys(PatchFlagNames)
@@ -238,6 +241,11 @@ export const transformElement: NodeTransform = (node, context) => {
   }
 }
 
+// 1、动态组件（<component、<Component 标签 is 属性 、vue:）
+// 2、内置组件（Teleport, Transition, KeepAlive, Suspense）
+// 3、用户自定义组件 （Setup）
+// 4、自己引用自己
+// 5、resolve Component
 export function resolveComponentType(
   node: ComponentNode,
   context: TransformContext,

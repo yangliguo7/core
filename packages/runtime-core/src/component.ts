@@ -458,7 +458,7 @@ export function createComponentInstance(
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
-debugger
+
   const instance: ComponentInternalInstance = {
     uid: uid++, // 从0累加
     vnode,

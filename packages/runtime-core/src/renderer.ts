@@ -1259,7 +1259,7 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
-      // 2、设置组件实例
+      // 2、设置组件实例 => template 转换为 ast (compiler)；ast数generate的code 变成渲染函数
       // 将模板转化为render函数(instance.render) 根据render 函数进行 下一步操作
       setupComponent(instance)
       if (__DEV__) {
@@ -1281,7 +1281,9 @@ function baseCreateRenderer(
       return
     }
 
-    // 3、设置并运行带副作用的渲染函数
+    // 3、设置并运行带副作用的渲染函数=>vnode(render 执行) =>生成dom (patch)
+    // Q：为什么模板不直接编译成vnode，而需要通过render进行生成vnode进行一次操作?
+    // A：运行时是会发生re-render的，如果编译生成的产物是最终的vnode，那么这个vnode将无法做到动态化，当框架发生重渲染时，vnode无法感知到最新的动态数据，
     setupRenderEffect(
       instance,
       initialVNode,
@@ -1383,7 +1385,7 @@ function baseCreateRenderer(
             if (__DEV__) {
               startMeasure(instance, `render`)
             }
-            // 生成subTree
+            // 生成subTree => render => vnode
             instance.subTree = renderComponentRoot(instance)
             if (__DEV__) {
               endMeasure(instance, `render`)
@@ -1426,6 +1428,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             startMeasure(instance, `patch`)
           }
+          // 生成真实dom
           patch( // 同步
             null,
             subTree,

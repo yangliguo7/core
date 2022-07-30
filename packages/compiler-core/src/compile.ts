@@ -31,10 +31,10 @@ export function getBaseTransformPreset(
     [
       transformOnce,
       transformIf,
-      transformMemo,
+      transformMemo, // 缓存一个模板的子树。元素和组件都可以使用 https://staging-cn.vuejs.org/api/built-in-directives.html#v-memo
       transformFor,
       ...(__COMPAT__ ? [transformFilter] : []),
-      ...(!__BROWSER__ && prefixIdentifiers
+      ...(!__BROWSER__ && prefixIdentifiers // 只有在nodejs transformExpression
         ? [
             // order is important
             trackVForSlotScopes,
@@ -82,9 +82,11 @@ export function baseCompile(
     onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
   }
 
+  // 1、解析模板生成 AST 树(原始AST)
+  // 一个包含child(自定向下 包含不同tag子元素) 的对象
   const ast = isString(template) ? baseParse(template, options) : template
-  const [nodeTransforms, directiveTransforms] =
-    getBaseTransformPreset(prefixIdentifiers)
+  // 集成和平台无关的指令 v-for if on model等
+  const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(prefixIdentifiers)
 
   if (!__BROWSER__ && options.isTS) {
     const { expressionPlugins } = options
@@ -93,8 +95,9 @@ export function baseCompile(
     }
   }
 
+  // 2、AST转换 (将原始AST 转换为 可渲染的AST树)
   transform(
-    ast,
+    ast, // ROOT 节点
     extend({}, options, {
       prefixIdentifiers,
       nodeTransforms: [
@@ -109,6 +112,7 @@ export function baseCompile(
     })
   )
 
+  // 3、生成代码
   return generate(
     ast,
     extend({}, options, {

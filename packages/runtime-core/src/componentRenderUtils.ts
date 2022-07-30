@@ -65,7 +65,6 @@ export function renderComponentRoot(
   if (__DEV__) {
     accessedAttrs = false
   }
-
   try {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
       // withProxy is a proxy with a different `has` trap only for

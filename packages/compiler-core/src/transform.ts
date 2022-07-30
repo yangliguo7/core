@@ -315,15 +315,15 @@ export function createTransformContext(
 }
 
 export function transform(root: RootNode, options: TransformOptions) {
-  const context = createTransformContext(root, options)
-  traverseNode(root, context)
-  if (options.hoistStatic) {
+  const context = createTransformContext(root, options) // 创建上下文对象
+  traverseNode(root, context) // 遍历节点
+  if (options.hoistStatic) { // 静态提升
     hoistStatic(root, context)
   }
   if (!options.ssr) {
     createRootCodegen(root, context)
   }
-  // finalize meta information
+  // finalize meta information // 创建根节点代码
   root.helpers = [...context.helpers.keys()]
   root.components = [...context.components]
   root.directives = [...context.directives]
@@ -411,10 +411,10 @@ export function traverseNode(
 ) {
   context.currentNode = node
   // apply transform plugins
-  const { nodeTransforms } = context
+  const { nodeTransforms } = context // 转换指令操作 packages/compiler-core/src/compile.ts；if / once /memo Line 31
   const exitFns = []
   for (let i = 0; i < nodeTransforms.length; i++) {
-    const onExit = nodeTransforms[i](node, context)
+    const onExit = nodeTransforms[i](node, context) // 这里返回退出函数，因为有些节点处理依赖子节点的处理结果进行处理
     if (onExit) {
       if (isArray(onExit)) {
         exitFns.push(...onExit)
@@ -456,7 +456,7 @@ export function traverseNode(
     case NodeTypes.FOR:
     case NodeTypes.ELEMENT:
     case NodeTypes.ROOT:
-      traverseChildren(node, context)
+      traverseChildren(node, context) // 解析子节点
       break
   }
 
@@ -481,7 +481,7 @@ export function createStructuralDirectiveTransform(
       const { props } = node
       // structural directive transforms are not concerned with slots
       // as they are handled separately in vSlot.ts
-      if (node.tagType === ElementTypes.TEMPLATE && props.some(isVSlot)) {
+      if (node.tagType === ElementTypes.TEMPLATE && props.some(isVSlot)) { // 当name是template并且attr有指令才会使ElementTypes.TEMPLATE
         return
       }
       const exitFns = []

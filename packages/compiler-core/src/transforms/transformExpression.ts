@@ -39,6 +39,8 @@ import { BindingTypes } from '../options'
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
+// 转换插值和元素指定的动态表达式
+// 表达式节点无子元素、因此不需要退出函数
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
     node.content = processExpression(
@@ -96,6 +98,7 @@ export function processExpression(
   asRawStatements = false,
   localVars: Record<string, number> = Object.create(context.identifiers)
 ): ExpressionNode {
+  debugger
   if (__BROWSER__) {
     if (__DEV__) {
       // simple in-browser validation (same logic in 2.x)
@@ -154,7 +157,7 @@ export function processExpression(
           )
           return `${context.helperString(IS_REF)}(${raw})${
             context.isTS ? ` //@ts-ignore\n` : ``
-          } ? ${raw}.value ${operator} ${rExpString} : ${raw}`
+          } ? ${raw}.value ${operator} ${rExpString} : ${raw}` // 这里在模板中也不再需要使用.value
         } else if (isUpdateArg) {
           // make id replace parent in the code range so the raw update operator
           // is removed
@@ -198,7 +201,7 @@ export function processExpression(
     }
 
     // fallback to ctx
-    return `_ctx.${raw}`
+    return `_ctx.${raw}` // 这里绑定了ctx，因此在模板中不需要在使用this
   }
 
   // fast path if expression is a simple identifier.
@@ -257,6 +260,8 @@ export function processExpression(
   const parentStack: Node[] = []
   const knownIds: Record<string, number> = Object.create(context.identifiers)
 
+  // 这个方式是node端用的，因此node端和web端生产环境是有区别的
+  // web prd环境下，并不会对表达式进行解析（使用with(this)）。node 端使用_ctx.xxxx
   walkIdentifiers(
     ast,
     (node, parent, _, isReferenced, isLocal) => {

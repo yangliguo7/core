@@ -43,7 +43,7 @@ export function compile(
 ): CodegenResult {
   return baseCompile(
     template,
-    extend({}, parserOptions, options, {
+    extend({}, parserOptions, options, { // 扩展option
       nodeTransforms: [
         // ignore <script> and <tag>
         // this is not put inside DOMNodeTransforms because that list is used

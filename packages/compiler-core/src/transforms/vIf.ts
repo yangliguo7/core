@@ -46,6 +46,7 @@ export const transformIf = createStructuralDirectiveTransform(
       // #1587: We need to dynamically increment the key based on the current
       // node's sibling nodes, since chained v-if/else branches are
       // rendered at the same depth
+      // fixme 这里是做什么 ?
       const siblings = context.parent!.children
       let i = siblings.indexOf(ifNode)
       let key = 0
@@ -93,7 +94,7 @@ export function processIf(
   if (
     dir.name !== 'else' &&
     (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim())
-  ) {
+  ) { // if elseif && 后面无表达式
     const loc = dir.exp ? dir.exp.loc : node.loc
     context.onError(
       createCompilerError(ErrorCodes.X_V_IF_NO_EXPRESSION, dir.loc)
@@ -101,7 +102,7 @@ export function processIf(
     dir.exp = createSimpleExpression(`true`, false, loc)
   }
 
-  if (!__BROWSER__ && context.prefixIdentifiers && dir.exp) {
+  if (!__BROWSER__ && context.prefixIdentifiers/*默认false*/ && dir.exp) {
     // dir.exp can only be simple expression because vIf transform is applied
     // before expression transform.
     dir.exp = processExpression(dir.exp as SimpleExpressionNode, context)
@@ -127,7 +128,7 @@ export function processIf(
     const siblings = context.parent!.children
     const comments = []
     let i = siblings.indexOf(node)
-    while (i-- >= -1) {
+    while (i-- >= -1) { // 这里i-- 作为siblings(context.parent!.children)的下标，即为了拿到前面相邻的 v-if
       const sibling = siblings[i]
       if (__DEV__ && sibling && sibling.type === NodeTypes.COMMENT) {
         context.removeNode(sibling)
@@ -188,7 +189,7 @@ export function processIf(
           }
         }
 
-        sibling.branches.push(branch)
+        sibling.branches.push(branch) // if的branch(root) 下面push 子逻辑
         const onExit = processCodegen && processCodegen(sibling, branch, false)
         // since the branch was removed, it will not be traversed.
         // make sure to traverse here.
